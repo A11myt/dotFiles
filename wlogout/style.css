@@ -1,0 +1,27 @@
+@import 'styles/buttons.css';
+@import 'styles/colors.css';
+
+
+window {
+ color: @on_surface;
+ background-color: alpha(@surface, 0.8);
+  /* backdrop-filter: blur(24px);  */
+}
+
+button {
+  border-radius: 20px;
+  margin: 4px;
+  text-decoration-color: transparent;
+  border-style: solid;
+  border-width: 1px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 20%;
+}
+
+button:focus,
+button:active,
+button:hover {
+  background-color: @primary;
+  outline-style: none;
+}

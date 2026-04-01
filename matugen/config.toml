@@ -1,0 +1,60 @@
+[config]
+
+[config.wallpaper]
+command = '/home/jason/.config/matugen/wallpaper.sh {{ image }}'
+set = true
+
+[templates.alacritty]
+input_path = '~/.config/matugen/templates/alacritty.toml'
+output_path = '~/.config/alacritty/colors/matugen.toml'
+
+[templates.hyprland]
+input_path = '~/.config/matugen/templates/hyprland-colors.conf'
+output_path = '~/.config/hypr/themes/matugen.conf'
+post_hook = 'hyprctl reload'
+
+[templates.waybar]
+input_path = '~/.config/matugen/templates/colors.css'
+output_path = '~/.config/waybar/colors/matugen.css'
+post_hook = 'pkill -SIGUSR2 waybar'
+
+[template.gtk3]
+input_path = '~/.config/matugen/templates/gtk-colors.css'
+output_path = '~/.config/gtk-3.0/colors.css'
+post_hook = 'gsettings set org.gnome.desktop.interface gtk-theme ""; gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-{{mode}}'
+
+[templates.gtk4]
+input_path = '~/.config/matugen/templates/gtk-colors.css'
+output_path = '~/.config/gtk-4.0/colors.css'
+
+[templates.pywalfox]
+input_path = '~/.config/matugen/templates/pywalfox-colors.json'
+output_path = '~/.cache/wal/colors.json'
+post_hook = 'pywalfox update'
+
+[templates.rofi]
+input_path = '~/.config/matugen/templates/rofi-colors.rasi'
+output_path = '~/.config/rofi/colors.rasi'
+# post_hook = 'pkill -SIGUSR1 rofi'
+
+[templates.wlogout]
+input_path='~/.config/matugen/templates/colors.css'
+output_path='~/.config/wlogout/styles/colors.css'
+
+[templates.swaync]
+input_path='~/.config/matugen/templates/colors.css'
+output_path='~/.config/swaync/colors/colors.css'
+
+[templates.obsidian]
+input_path = '~/.config/matugen/templates/obsidian.css'
+output_path = '~/Obsidian/.obsidian/snippets/matugen.css'
+
+[templates.steam]
+input_path = '~/.config/matugen/templates/steam.css'
+output_path = '~/.var/app/io.github.Foldex.AdwSteamGtk/config/AdwSteamGtk/custom.css'
+post_hook = 'flatpak run io.github.Foldex.AdwSteamGtk -i'
+
+[templates.nvim]
+input_path = '~/.config/matugen/templates/nvim.lua'
+output_path = '~/.config/nvim/lua/config/matugen_colors.lua'
+post_hook = 'pkill -SIGUSR1 nvim'
