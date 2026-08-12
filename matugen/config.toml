@@ -16,9 +16,9 @@ post_hook = 'hyprctl reload'
 [templates.waybar]
 input_path = '~/.config/matugen/templates/colors.css'
 output_path = '~/.config/waybar/colors/matugen.css'
-post_hook = 'pkill -SIGUSR2 waybar'
+# waybar replaced by AGS — post_hook moved to [templates.ags]
 
-[template.gtk3]
+[templates.gtk3]
 input_path = '~/.config/matugen/templates/gtk-colors.css'
 output_path = '~/.config/gtk-3.0/colors.css'
 post_hook = 'gsettings set org.gnome.desktop.interface gtk-theme ""; gsettings set org.gnome.desktop.interface gtk-theme adw-gtk3-{{mode}}'
@@ -26,6 +26,7 @@ post_hook = 'gsettings set org.gnome.desktop.interface gtk-theme ""; gsettings s
 [templates.gtk4]
 input_path = '~/.config/matugen/templates/gtk-colors.css'
 output_path = '~/.config/gtk-4.0/colors.css'
+post_hook = 'gsettings set org.gnome.desktop.interface color-scheme prefer-dark; pkill nautilus 2>/dev/null; true'
 
 [templates.pywalfox]
 input_path = '~/.config/matugen/templates/pywalfox-colors.json'
@@ -57,4 +58,9 @@ post_hook = 'flatpak run io.github.Foldex.AdwSteamGtk -i'
 [templates.nvim]
 input_path = '~/.config/matugen/templates/nvim.lua'
 output_path = '~/.config/nvim/lua/config/matugen_colors.lua'
-post_hook = 'pkill -SIGUSR1 nvim'
+post_hook = 'pkill -SIGUSR1 nvim; python3 ~/.config/matugen/godot-theme.py'
+
+[templates.ags]
+input_path = '~/.config/matugen/templates/ags-colors.scss'
+output_path = '~/.config/ags/colors.scss'
+post_hook = 'nohup /home/jason/.config/ags/restart.sh &'

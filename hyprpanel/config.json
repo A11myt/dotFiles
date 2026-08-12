@@ -1,0 +1,13 @@
+{
+  "bar.customModules.storage.paths": [
+    "/"
+  ],
+  "theme.font.name": "Hack Nerd Font Propo",
+  "theme.font.label": "Hack Nerd Font Propo",
+  "theme.font.size": "1.1rem",
+  "tear": false,
+  "menus.transition": "crossfade",
+  "theme.bar.floating": true,
+  "theme.bar.transparent": true,
+  "theme.bar.buttons.style": "split"
+}

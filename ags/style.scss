@@ -1,0 +1,159 @@
+@use "colors" as *;
+
+// ── Design tokens ──────────────────────────────────────────────────────────
+$orange:      #ff6a00;
+$pill-bg:     rgba($surface_variant, 0.05);
+$pill-hover:  rgba($surface_variant, 0.08);
+$pill-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
+$font-main:   "Iosevka Nerd Font Propo";
+$font-dot:    "NDOT 47 (inspired by NOTHING)", "Iosevka Nerd Font Propo";
+
+// ── Base reset ─────────────────────────────────────────────────────────────
+* {
+    all: unset;
+    font-family: $font-main;
+    font-size: 13px;
+    color: $on_surface;
+    transition: background 250ms, color 250ms, box-shadow 250ms;
+}
+
+// ── Bar window ─────────────────────────────────────────────────────────────
+window.Bar {
+    background: rgba(15, 15, 15, 0.2);
+
+    > centerbox {
+        padding: 4px 16px;
+        background: transparent;
+    }
+}
+
+tooltip {
+    background: $surface;
+    border: 1px solid $outline;
+    border-radius: 10px;
+}
+
+// ── Pill mixin ─────────────────────────────────────────────────────────────
+@mixin pill($px: 14px) {
+    padding: 4px $px;
+    margin: 0 6px;
+    background: $pill-bg;
+    border-radius: 18px;
+    box-shadow: $pill-shadow;
+}
+
+@mixin icon-pill {
+    font-size: 18px;
+    padding: 0 16px 0 10px;
+    margin: 0 6px;
+    background: $pill-bg;
+    border-radius: 18px;
+    box-shadow: $pill-shadow;
+}
+
+@mixin hover-orange {
+    &:hover {
+        background: $pill-hover;
+    }
+    &:hover, &:hover label {
+        color: $orange;
+    }
+}
+
+// ── Left ───────────────────────────────────────────────────────────────────
+.Launcher {
+    @include icon-pill;
+    color: $orange;
+    @include hover-orange;
+}
+
+.Clock {
+    @include pill;
+    font-family: $font-dot;
+    font-size: 14px;
+    letter-spacing: 2px;
+    @include hover-orange;
+}
+
+.Weather {
+    @include pill;
+    @include hover-orange;
+}
+
+.Workspaces {
+    @include pill;
+
+    .Workspace {
+        padding: 4px 10px;
+        margin: 0 4px;
+        color: $on_surface_variant;
+        background: rgba($surface_variant, 0.05);
+        border-radius: 14px;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+
+        label { color: $on_surface_variant; }
+
+        &:hover { background: rgba($surface_variant, 0.12); }
+        &:hover, &:hover label { color: $orange; }
+
+        &.active, &.active label {
+            background: rgba(255, 106, 0, 0.75);
+            color: $on_primary;
+            font-family: $font-dot;
+            letter-spacing: 2px;
+        }
+        &.active { background: rgba(255, 106, 0, 0.75); }
+        &.active:hover { background: rgba(255, 106, 0, 0.88); }
+        &.active:hover, &.active:hover label { color: $on_primary; }
+    }
+}
+
+// ── Center ─────────────────────────────────────────────────────────────────
+.Notification {
+    @include icon-pill;
+    @include hover-orange;
+}
+
+.Media {
+    @include pill;
+    color: $secondary;
+    @include hover-orange;
+}
+
+// ── Right ──────────────────────────────────────────────────────────────────
+.Updates {
+    padding: 0 16px 0 10px;
+    margin: 0 6px;
+    background: $pill-bg;
+    border-radius: 18px;
+    box-shadow: $pill-shadow;
+    @include hover-orange;
+}
+
+.Volume {
+    @include pill;
+    @include hover-orange;
+}
+
+.Battery {
+    padding: 2px 16px 0 10px;
+    margin: 0 6px;
+    background: $pill-bg;
+    border-radius: 18px;
+    box-shadow: $pill-shadow;
+
+    &.critical {
+        background: rgba($error, 0.08);
+        color: $error;
+    }
+}
+
+.Network {
+    @include pill;
+    @include hover-orange;
+}
+
+.PowerProfile {
+    @include icon-pill;
+    @include hover-orange;
+}
