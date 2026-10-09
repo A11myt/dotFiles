@@ -1,0 +1,13 @@
+[user]
+	name = A11myt
+	email = Jason.j@gmx.de
+[pull]
+	rebase = true
+[rebase]
+	autoStash = true
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/bin/gh auth git-credential

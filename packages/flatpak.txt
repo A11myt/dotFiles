@@ -1,0 +1,5 @@
+com.unity.UnityHub
+de.shorsh.discord-screenaudio
+io.github.Foldex.AdwSteamGtk
+md.obsidian.Obsidian
+org.godotengine.Godot

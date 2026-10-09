@@ -1,0 +1,7 @@
+# greetd – installiert nach /etc/greetd/config.toml, Quelle: ~/.config/greetd/
+[terminal]
+vt = 1
+
+[default_session]
+command = "Hyprland --config /etc/greetd/hyprland-greeter.lua"
+user = "greeter"

@@ -1,0 +1,26 @@
+# ── Lokal / Tools ────────────────────────────────────────────────
+.claude/
+node_modules/
+@girs/
+*.bak
+*.log
+
+# ── Von Matugen generiert (ändert sich bei jedem Wallpaper) ──────
+alacritty/.config/alacritty/colors/matugen.toml
+hypr/.config/hypr/themes/matugen.conf
+hypr/.config/hypr/themes/matugen.lua
+rofi/.config/rofi/colors.rasi
+swaync/.config/swaync/colors/
+wlogout/.config/wlogout/styles/colors.css
+ags/.config/ags/colors.scss
+nvim/.config/nvim/lua/config/matugen_colors.lua
+
+# ── Von Hyprland autogeneriert ───────────────────────────────────
+hypr/.config/hypr/hyprland.conf
+
+# ── Niemals committen ────────────────────────────────────────────
+*.keyring
+id_*
+*.pem
+.env
+secrets.zsh

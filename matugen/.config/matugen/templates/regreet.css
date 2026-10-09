@@ -1,0 +1,85 @@
+/*
+ * ReGreet (Login) — generated with Matugen
+ * Ziel: /var/lib/greeter-theme/regreet.css
+ */
+<* for name, value in colors *>
+@define-color {{name}} {{value.default.hex}};
+<* endfor *>
+
+@define-color accent_bg_color   @primary;
+@define-color accent_fg_color   @on_primary;
+@define-color accent_color      @primary;
+@define-color window_bg_color   @surface;
+@define-color window_fg_color   @on_surface;
+@define-color view_bg_color     @surface_container;
+@define-color view_fg_color     @on_surface;
+@define-color card_bg_color     @surface_container;
+@define-color card_fg_color     @on_surface;
+@define-color popover_bg_color  @surface_container_high;
+@define-color popover_fg_color  @on_surface;
+
+* {
+    font-family: "Iosevka Nerd Font Propo", sans-serif;
+}
+
+window {
+    background-color: transparent;
+}
+
+/* Login-Panel, Uhr oben und Info-Leiste sind alle gtk::Frame mit Klasse .background */
+frame.background {
+    background-image: none;
+    background-color: alpha(@surface_container_lowest, 0.88);
+    color: @on_surface;
+    border: 1px solid @outline_variant;
+    border-radius: 28px;
+    box-shadow: 0 8px 32px alpha(@shadow, 0.45);
+}
+
+label {
+    color: @on_surface;
+}
+
+entry, combobox button, dropdown button {
+    background-color: @surface_container;
+    color: @on_surface;
+    border: 1px solid @outline_variant;
+    border-radius: 16px;
+    min-height: 40px;
+}
+
+entry:focus-within {
+    border-color: @primary;
+}
+
+button {
+    border-radius: 16px;
+    background-color: @surface_container_high;
+    color: @on_surface;
+}
+
+button:hover {
+    background-color: @secondary_container;
+    color: @on_secondary_container;
+}
+
+button.suggested-action {
+    background-color: @primary;
+    color: @on_primary;
+}
+
+button.destructive-action {
+    background-color: @error_container;
+    color: @on_error_container;
+}
+
+frame.background > grid,
+frame.background > box {
+    background-color: transparent;
+    padding: 6px;
+}
+
+/* Reboot / Power Off unten */
+button.destructive-action {
+    background-image: none;
+}

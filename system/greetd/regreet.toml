@@ -1,0 +1,24 @@
+# ReGreet – installiert nach /etc/greetd/regreet.toml, Quelle: ~/.config/greetd/
+# Farben: /var/lib/greeter-theme/regreet.css (Matugen) · Hintergrund: aktuelles Wallpaper
+
+[background]
+path = "/var/lib/greeter-theme/wallpaper.jpg"
+fit = "Cover"
+
+[GTK]
+application_prefer_dark_theme = true
+theme_name = "adw-gtk3-dark"
+icon_theme_name = "Papirus-Dark"
+cursor_theme_name = "Adwaita"
+font_name = "Iosevka Nerd Font Propo 12"
+
+[commands]
+reboot = ["systemctl", "reboot"]
+poweroff = ["systemctl", "poweroff"]
+
+[appearance]
+greeting_msg = "welcome back"
+
+[widget.clock]
+format = "%H:%M"
+resolution = "1s"

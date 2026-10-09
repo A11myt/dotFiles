@@ -1,0 +1,3 @@
+#!/bin/bash
+# Called by Godot: godot-nvim {file} {line}:{col}
+exec alacritty --class godot-editor -e nvim "${1}" +"${2:-1}"
