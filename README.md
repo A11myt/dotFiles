@@ -16,6 +16,7 @@ Verwaltet mit **GNU stow**: jedes Verzeichnis hier ist ein Paket, dessen Inhalt 
 | `nvim` | `~/.config/nvim` | AstroNvim v5 |
 | `tmux` | `~/.config/tmux` | tmux-Config + Keybinds |
 | `scripts` | `~/.config/scripts` | `log.sh` – gemeinsames Logging nach `~/.logs/<tool>/` |
+| `pacman` | `~/.config/pacman` | `makepkg.conf`: keine `-debug`-Pakete bei AUR-Builds |
 | `zsh` | `~` | `.zshrc`, `.zprofile`, `.p10k.zsh` |
 | `git` | `~` | `.gitconfig`, globales `~/.config/git/ignore` |
 | `bin` | `~/.local/bin` | `ssh-askpass-keyring.sh`, `godot-nvim` |
