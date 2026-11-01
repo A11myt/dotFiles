@@ -177,8 +177,10 @@ def check_toolkits() -> None:
                 env = Path(f"/proc/{pid.split()[0]}/environ").read_text(errors="replace")
             except OSError:
                 pass
-        if "QT_QPA_PLATFORMTHEME=qt6ct" in env:
-            report("ok", "qt6ct aktiv (QT_QPA_PLATFORMTHEME in der Session gesetzt)")
+        if "QT_QPA_PLATFORMTHEME=qt5ct" in env:
+            report("ok", "qt5ct/qt6ct aktiv (QT_QPA_PLATFORMTHEME in der Session gesetzt)")
+        elif "QT_QPA_PLATFORMTHEME=qt6ct" in env:
+            report("warn", "QT_QPA_PLATFORMTHEME=qt6ct: Qt5-Apps bleiben ungethemt (qt5ct setzen)")
         else:
             report("warn", "QT_QPA_PLATFORMTHEME fehlt in der Session (neu anmelden?)")
 
