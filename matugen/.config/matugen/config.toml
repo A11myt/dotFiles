@@ -28,7 +28,7 @@ post_hook = 'gsettings set org.gnome.desktop.interface gtk-theme ""; gsettings s
 input_path = '~/.config/matugen/templates/gtk4-colors.css'
 output_path = '~/.config/gtk-4.0/colors.css'
 # Portal neu starten → Datei-Auswahldialoge übernehmen die Farben; Nautilus neu laden
-post_hook = 'gsettings set org.gnome.desktop.interface color-scheme prefer-{{mode}}; systemctl --user restart xdg-desktop-portal-gtk 2>/dev/null; nautilus -q 2>/dev/null; true'
+post_hook = 'gsettings set org.gnome.desktop.interface color-scheme prefer-{{mode}}; systemctl --user restart xdg-desktop-portal-gtk 2>/dev/null; pgrep -x nautilus >/dev/null && nautilus -q; true'
 
 [templates.qt5ct]
 input_path = '~/.config/matugen/templates/qtct-colors.conf'
@@ -63,7 +63,7 @@ output_path = '~/Obsidian/.obsidian/snippets/matugen.css'
 [templates.steam]
 input_path = '~/.config/matugen/templates/steam.css'
 output_path = '~/.var/app/io.github.Foldex.AdwSteamGtk/config/AdwSteamGtk/custom.css'
-post_hook = 'flatpak run io.github.Foldex.AdwSteamGtk -i'
+post_hook = '~/.config/matugen/steam-skin.sh 60'  # verzögert + entprellt, siehe Skript
 
 [templates.nvim]
 input_path = '~/.config/matugen/templates/nvim.lua'

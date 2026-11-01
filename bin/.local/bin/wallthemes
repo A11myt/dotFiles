@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+"""wallthemes – Matugen-Theming mit Cache pro Wallpaper und parallelen Hooks.
+
+  wallthemes <bild>            Theme anwenden (aus dem Cache, sonst einmal rendern)
+  wallthemes <bild> --refresh  Cache für dieses Bild neu rendern
+  wallthemes build             Cache für alle Bilder in ~/Pictures/wallpapers vorrendern
+  wallthemes clean             Caches entfernen, deren Bild nicht mehr existiert
+  wallthemes list              Gecachte Wallpaper anzeigen
+
+Cache: ~/.local/share/wallthemes/<bildname>/
+  files/<absoluter Zielpfad>   alle gerenderten Configs (wie matugen --prefix sie ablegt)
+  colors.json                  Farbpalette
+  stamp                        Hash aus Bild, config.toml, Templates und matugen-Version
+
+Matugen selbst würde die Hooks nacheinander ausführen (~25 s, davon 0,6 s Farbberechnung).
+Hier rendert Matugen ohne Hooks, die Dateien werden kopiert und die post_hooks aus
+config.toml laufen parallel. config.toml bleibt die einzige Quelle für Templates und Hooks.
+"""
+import hashlib
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+import tomllib
+from datetime import datetime
+from pathlib import Path
+
+HOME = Path.home()
+CONFIG = HOME / ".config/matugen/config.toml"
+CACHE = HOME / ".local/share/wallthemes"
+WALL_DIR = HOME / "Pictures/wallpapers"
+LOG = HOME / ".logs/wallthemes" / f"{datetime.now():%Y-%m-%d}.log"
+MATUGEN_ARGS = ["--source-color-index", "0"]
+MODE = "dark"
+IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+HOOK_TIMEOUT = 60
+
+
+def log(level: str, msg: str) -> None:
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as f:
+        f.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} [{level:<5}] {msg}\n")
+    if level != "INFO" or sys.stdout.isatty():
+        print(f"wallthemes: {msg}", file=sys.stderr if level != "INFO" else sys.stdout)
+
+
+def expand(p: str) -> Path:
+    return Path(os.path.expanduser(p))
+
+
+def load_config() -> dict:
+    return tomllib.loads(CONFIG.read_text())
+
+
+def stamp_for(image: Path, cfg: dict) -> str:
+    h = hashlib.sha256()
+    st = image.stat()
+    h.update(f"{image.resolve()}|{st.st_size}|{st.st_mtime_ns}".encode())
+    h.update(CONFIG.read_bytes())
+    for t in cfg.get("templates", {}).values():
+        src = expand(t["input_path"])
+        h.update(src.read_bytes() if src.exists() else b"missing")
+    version = subprocess.run(["matugen", "--version"], capture_output=True, text=True).stdout
+    h.update(version.encode())
+    h.update(" ".join(MATUGEN_ARGS + [MODE]).encode())
+    return h.hexdigest()
+
+
+def toml_value(v) -> str:
+    # JSON-Strings/Zahlen/Bools sind gültiges TOML
+    return json.dumps(v)
+
+
+def render(image: Path, cfg: dict, target: Path, stamp: str) -> None:
+    """Rendert alle Templates ohne Hooks/Wallpaper nach target/files."""
+    tmp = Path(tempfile.mkdtemp(prefix="wallthemes-", dir=CACHE))
+    try:
+        lines = ["[config]", ""]
+        for name, t in cfg.get("templates", {}).items():
+            lines.append(f"[templates.{toml_value(name)}]")
+            lines += [f"{k} = {toml_value(v)}" for k, v in t.items() if k != "post_hook"]
+            lines.append("")
+        cfg_file = tmp / "config.toml"
+        cfg_file.write_text("\n".join(lines))
+
+        files = tmp / "files"
+        r = subprocess.run(
+            ["matugen", "image", str(image), *MATUGEN_ARGS, "-m", MODE,
+             "-c", str(cfg_file), "--prefix", str(files), "--json", "hex"],
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            raise RuntimeError(f"matugen fehlgeschlagen: {r.stderr.strip()[-500:]}")
+        # stdout = JSON-Palette, davor ggf. Statuszeilen
+        out = r.stdout
+        (tmp / "colors.json").write_text(out[out.find("{"):] if "{" in out else out)
+        (tmp / "image").write_text(str(image.resolve()) + "\n")
+        (tmp / "stamp").write_text(stamp)
+        cfg_file.unlink()
+
+        if target.exists():
+            shutil.rmtree(target)
+        tmp.rename(target)  # atomar: halbfertige Caches gibt es nie
+    finally:
+        if tmp.exists():
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+def ensure_cache(image: Path, cfg: dict, refresh: bool = False) -> tuple[Path, bool]:
+    CACHE.mkdir(parents=True, exist_ok=True)
+    target = CACHE / image.name
+    stamp = stamp_for(image, cfg)
+    stamp_file = target / "stamp"
+    if not refresh and stamp_file.exists() and stamp_file.read_text() == stamp:
+        return target, True
+    render(image, cfg, target, stamp)
+    return target, False
+
+
+def install(target: Path, cfg: dict) -> int:
+    """Kopiert die gecachten Dateien an ihre Zielorte (atomar per rename)."""
+    missing = 0
+    for name, t in cfg.get("templates", {}).items():
+        dest = expand(t["output_path"])
+        src = target / "files" / str(dest).lstrip("/")
+        if not src.exists():
+            log("WARN", f"{name}: nicht im Cache ({src})")
+            missing += 1
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_name(f".{dest.name}.wallthemes")
+        shutil.copyfile(src, tmp)
+        os.replace(tmp, dest)
+    return missing
+
+
+def run_hooks(cfg: dict, image: Path) -> int:
+    procs = []
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as logf:
+        for name, t in cfg.get("templates", {}).items():
+            hook = t.get("post_hook")
+            if not hook:
+                continue
+            hook = hook.replace("{{mode}}", MODE).replace("{{ mode }}", MODE)
+            hook = hook.replace("{{image}}", str(image)).replace("{{ image }}", str(image))
+            if "{{" in hook:
+                log("WARN", f"{name}: unbekannter Platzhalter im Hook: {hook}")
+            p = subprocess.Popen(["bash", "-c", hook], cwd=HOME, stdout=logf,
+                                 stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL)
+            procs.append((name, p, time.monotonic()))
+
+    failed = 0
+    for name, p, start in procs:
+        try:
+            rc = p.wait(timeout=max(1, HOOK_TIMEOUT - (time.monotonic() - start)))
+        except subprocess.TimeoutExpired:
+            p.kill()
+            rc = "timeout"
+        if rc != 0:
+            log("WARN", f"hook {name}: exit {rc}")
+            failed += 1
+    return failed
+
+
+def set_wallpaper(cfg: dict, image: Path) -> subprocess.Popen | None:
+    wp = cfg.get("config", {}).get("wallpaper", {})
+    if not wp.get("set") or not wp.get("command"):
+        return None
+    cmd = wp["command"].replace("{{ image }}", str(image)).replace("{{image}}", str(image))
+    return subprocess.Popen(["bash", "-c", cmd], cwd=HOME, stdin=subprocess.DEVNULL,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def apply(image: Path, refresh: bool) -> int:
+    t0 = time.monotonic()
+    cfg = load_config()
+    wp = set_wallpaper(cfg, image)  # sofort, die Übergangsanimation läuft parallel
+    try:
+        target, hit = ensure_cache(image, cfg, refresh)
+    except RuntimeError as e:
+        log("ERROR", f"{image.name}: {e}")
+        return 1
+    t_cache = time.monotonic() - t0
+    missing = install(target, cfg)
+    failed = run_hooks(cfg, image)
+    if wp:
+        wp.wait(timeout=HOOK_TIMEOUT)
+    log("INFO", f"{image.name}: {'Cache' if hit else 'neu gerendert'} ({t_cache:.1f} s), "
+                f"gesamt {time.monotonic() - t0:.1f} s, {failed} Hook-Fehler, {missing} fehlend")
+    return 1 if failed or missing else 0
+
+
+def wallpapers() -> list[Path]:
+    return sorted(p for p in WALL_DIR.iterdir() if p.suffix.lower() in IMAGE_EXT)
+
+
+def build() -> int:
+    cfg = load_config()
+    errors = 0
+    for img in wallpapers():
+        try:
+            _, hit = ensure_cache(img, cfg)
+            print(f"{'✓ aktuell ' if hit else '+ gerendert'}  {img.name}")
+        except RuntimeError as e:
+            print(f"✗ Fehler    {img.name}: {e}")
+            errors += 1
+    return 1 if errors else 0
+
+
+def clean() -> int:
+    if not CACHE.exists():
+        return 0
+    for d in sorted(CACHE.iterdir()):
+        if not d.is_dir():
+            continue
+        src = (d / "image").read_text().strip() if (d / "image").exists() else ""
+        if d.name.startswith("wallthemes-") or not src or not Path(src).exists():
+            shutil.rmtree(d)
+            print(f"entfernt  {d.name}")
+    return 0
+
+
+def list_cache() -> int:
+    cfg = load_config()
+    for img in wallpapers():
+        d = CACHE / img.name
+        ok = (d / "stamp").exists() and (d / "stamp").read_text() == stamp_for(img, cfg)
+        print(f"{'✓' if ok else '·'}  {img.name}")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__.strip())
+        return 0
+    cmd = argv[0]
+    if cmd == "build":
+        return build()
+    if cmd == "clean":
+        return clean()
+    if cmd == "list":
+        return list_cache()
+    image = Path(cmd).expanduser()
+    if not image.is_file():
+        log("ERROR", f"Bild nicht gefunden: {image}")
+        return 1
+    return apply(image.resolve(), refresh="--refresh" in argv)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

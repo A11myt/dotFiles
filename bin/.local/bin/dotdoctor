@@ -1,0 +1,247 @@
+#!/usr/bin/env python3
+"""dotdoctor – findet stille Brüche im Setup (nach Updates oder Config-Umbauten).
+
+  dotdoctor            alle Checks
+  dotdoctor --updates  zusätzlich Repo-/AUR-/Flatpak-Updates abfragen (braucht Netz, langsamer)
+
+Exit-Code 1, sobald ein ✗ auftaucht. Warnungen (⚠) ändern den Exit-Code nicht.
+"""
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tomllib
+from datetime import datetime
+from pathlib import Path
+
+HOME = Path.home()
+DOTFILES = HOME / "Workspace/Github/dotfiles"
+MATUGEN_CFG = HOME / ".config/matugen/config.toml"
+WALLTHEMES = HOME / ".local/share/wallthemes"
+CURRENT_WALL = HOME / ".cache/wallpaper-picker/current"
+
+C = {"ok": "\033[32m✓\033[0m", "warn": "\033[33m⚠\033[0m", "fail": "\033[31m✗\033[0m"}
+failures = 0
+
+
+def report(state: str, msg: str, detail: str = "") -> None:
+    global failures
+    failures += state == "fail"
+    print(f"  {C[state]} {msg}")
+    for line in detail.strip().splitlines()[:8]:
+        print(f"      {line}")
+
+
+def section(name: str) -> None:
+    print(f"\n\033[1m{name}\033[0m")
+
+
+def sh(cmd: str) -> tuple[int, str]:
+    r = subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+def expand(p: str) -> Path:
+    return Path(os.path.expanduser(p))
+
+
+# ── Matugen ────────────────────────────────────────────────────────────────
+def check_matugen() -> None:
+    section("Matugen / Theming")
+    try:
+        cfg = tomllib.loads(MATUGEN_CFG.read_text())
+    except Exception as e:  # noqa: BLE001 – jede Parse-Fehlerart ist hier ein Befund
+        report("fail", f"config.toml nicht lesbar: {e}")
+        return
+    templates = cfg.get("templates", {})
+    report("ok", f"config.toml gültig, {len(templates)} Templates")
+
+    missing_in, missing_out, unrendered, stale = [], [], [], []
+    cache = None
+    if CURRENT_WALL.exists():
+        cache = WALLTHEMES / CURRENT_WALL.resolve().name / "files"
+    for name, t in templates.items():
+        src, dest = expand(t["input_path"]), expand(t["output_path"])
+        if not src.exists():
+            missing_in.append(f"{name}: {src}")
+            continue
+        if not dest.exists():
+            missing_out.append(f"{name}: {dest}")
+            continue
+        text = dest.read_text(errors="replace")
+        if "{{" in text or "<*" in text:
+            unrendered.append(f"{name}: {dest}")
+        if cache and cache.exists():
+            cached = cache / str(dest).lstrip("/")
+            if cached.exists() and cached.read_bytes() != dest.read_bytes():
+                stale.append(f"{name}: {dest}")
+
+    report("fail" if missing_in else "ok",
+           "alle Template-Quellen vorhanden" if not missing_in else "Template-Quelle fehlt",
+           "\n".join(missing_in))
+    report("fail" if missing_out else "ok",
+           "alle Ausgaben erzeugt" if not missing_out else "Ausgabe fehlt (Template lief nie?)",
+           "\n".join(missing_out))
+    if unrendered:
+        report("fail", "Ausgabe enthält ungerenderte Platzhalter", "\n".join(unrendered))
+    if cache is None or not cache.exists():
+        report("warn", "kein wallthemes-Cache für das aktuelle Wallpaper (wallthemes build)")
+    elif stale:
+        report("warn", "Ausgaben weichen vom aktuellen Wallpaper ab (veraltet oder von Hand geändert)",
+               "\n".join(stale))
+    else:
+        report("ok", f"Ausgaben passen zum aktuellen Wallpaper ({CURRENT_WALL.resolve().name})")
+
+    hooks = [t["post_hook"] for t in templates.values() if "post_hook" in t]
+    unknown = [h for h in hooks if re.search(r"\{\{\s*(?!mode|image)\w", h)]
+    if unknown:
+        report("warn", "Hook mit Platzhalter, den wallthemes nicht ersetzt", "\n".join(unknown))
+
+    if WALLTHEMES.exists():
+        orphans = [d.name for d in WALLTHEMES.iterdir()
+                   if d.is_dir() and (d / "image").exists()
+                   and not Path((d / "image").read_text().strip()).exists()]
+        if orphans:
+            report("warn", f"{len(orphans)} Caches ohne Bild (wallthemes clean)")
+
+
+# ── Hyprland ───────────────────────────────────────────────────────────────
+def check_hyprland() -> None:
+    section("Hyprland")
+    if not os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        report("warn", "nicht in einer Hyprland-Session, Live-Checks übersprungen")
+    else:
+        rc, out = sh("hyprctl configerrors")
+        out = out.strip()
+        report("fail" if out else "ok",
+               "keine Config-Fehler" if not out else "hyprctl meldet Config-Fehler", out)
+
+    lua = HOME / ".config/hypr/themes/matugen.lua"
+    if shutil.which("lua"):
+        rc, out = sh(f"lua -e 'dofile(\"{lua}\")'")
+        report("ok" if rc == 0 else "fail", "themes/matugen.lua lädt" if rc == 0
+               else "themes/matugen.lua fehlerhaft", "" if rc == 0 else out)
+
+    # hyprlang-Dateien, die noch auf Variablen aus matugen.conf zugreifen
+    conf = HOME / ".config/hypr/themes/matugen.conf"
+    for f in ("hyprlock.conf", "hypridle.conf"):
+        p = HOME / ".config/hypr" / f
+        if p.exists() and "themes/matugen.conf" in p.read_text() and not conf.exists():
+            report("fail", f"{f} sourced themes/matugen.conf, die Datei fehlt")
+
+
+# ── GTK / Qt / Icons ───────────────────────────────────────────────────────
+def check_toolkits() -> None:
+    section("GTK / Qt / Icons")
+
+    def gs(key: str) -> str:
+        return sh(f"gsettings get org.gnome.desktop.interface {key}")[1].strip("'")
+
+    gtk = gs("gtk-theme")
+    report("ok" if gtk.startswith("adw-gtk3") else "warn", f"GTK3-Theme: {gtk}",
+           "" if gtk.startswith("adw-gtk3") else "Matugen-Farben setzen adw-gtk3 voraus")
+
+    icons = gs("icon-theme")
+    found = any((d / icons / "index.theme").exists()
+                for d in (HOME / ".local/share/icons", HOME / ".icons", Path("/usr/share/icons")))
+    report("ok" if found else "fail", f"Icon-Theme: {icons}", "" if found else "Theme-Ordner fehlt")
+
+    for v in ("3.0", "4.0"):
+        css = HOME / f".config/gtk-{v}/gtk.css"
+        ok = css.exists() and "colors.css" in css.read_text()
+        report("ok" if ok else "fail", f"gtk-{v}/gtk.css bindet colors.css ein")
+
+    if not shutil.which("qt6ct"):
+        report("warn", "qt6ct nicht installiert → Qt-Apps ohne Matugen-Farben")
+    else:
+        env = ""
+        rc, pid = sh("pgrep -n -u $USER -x alacritty || pgrep -n -u $USER -f 'ags run'")
+        if pid.strip():
+            try:
+                env = Path(f"/proc/{pid.split()[0]}/environ").read_text(errors="replace")
+            except OSError:
+                pass
+        if "QT_QPA_PLATFORMTHEME=qt6ct" in env:
+            report("ok", "qt6ct aktiv (QT_QPA_PLATFORMTHEME in der Session gesetzt)")
+        else:
+            report("warn", "QT_QPA_PLATFORMTHEME fehlt in der Session (neu anmelden?)")
+
+
+# ── Dotfiles / Stow ────────────────────────────────────────────────────────
+def check_dotfiles() -> None:
+    section("Dotfiles")
+    install = DOTFILES / "install.sh"
+    m = re.search(r"^STOW_PKGS=\((.*)\)", install.read_text(), re.M) if install.exists() else None
+    if not m:
+        report("fail", "STOW_PKGS in install.sh nicht gefunden")
+        return
+    pkgs = m.group(1).split()
+    rc, out = sh(f"cd {DOTFILES} && stow --no --verbose=1 --target=$HOME {' '.join(pkgs)} 2>&1")
+    conflicts = [l for l in out.splitlines() if "conflict" in l.lower() or "existing target" in l]
+    report("fail" if rc or conflicts else "ok",
+           f"stow: {len(pkgs)} Pakete sauber verlinkt" if not (rc or conflicts) else "stow meldet Konflikte",
+           "\n".join(conflicts) or (out if rc else ""))
+
+    broken = [str(p) for p in (HOME / ".config").iterdir() if p.is_symlink() and not p.exists()]
+    broken += [str(p) for p in (HOME / ".local/bin").iterdir() if p.is_symlink() and not p.exists()]
+    report("warn" if broken else "ok",
+           "keine kaputten Symlinks in ~/.config, ~/.local/bin" if not broken else "kaputte Symlinks",
+           "\n".join(broken))
+
+    rc, out = sh(f"git -C {DOTFILES} status --porcelain")
+    n = len(out.splitlines()) if out else 0
+    report("warn" if n else "ok", "Dotfiles-Repo sauber" if not n else f"{n} uncommittete Änderungen im Repo")
+
+
+# ── System ─────────────────────────────────────────────────────────────────
+def check_system(updates: bool) -> None:
+    section("System")
+    rc, out = sh("uname -r; pacman -Q linux")
+    lines = out.splitlines()
+    if len(lines) == 2:
+        running = lines[0].replace("-arch", ".arch")
+        installed = lines[1].split()[1]
+        report("ok" if running == installed else "warn",
+               f"Kernel {lines[0]}" if running == installed
+               else f"Neustart nötig: läuft {lines[0]}, installiert {installed}")
+
+    rc, out = sh("systemctl --failed --no-legend --plain; systemctl --user --failed --no-legend --plain")
+    report("warn" if out else "ok", "keine fehlgeschlagenen Dienste" if not out else "fehlgeschlagene Dienste", out)
+
+    rc, out = sh("find /etc -name '*.pacnew' 2>/dev/null")
+    report("warn" if out else "ok", "keine .pacnew-Dateien" if not out else ".pacnew-Dateien prüfen", out)
+
+    rc, out = sh("pacman -Qdtq")
+    report("warn" if out else "ok", "keine verwaisten Pakete" if not out
+           else f"verwaiste Pakete: {' '.join(out.split())}")
+
+    today = f"{datetime.now():%Y-%m-%d}.log"
+    errs = []
+    for log in (HOME / ".logs").glob(f"*/{today}"):
+        n = sum(1 for l in log.read_text(errors="replace").splitlines() if "[ERROR]" in l)
+        if n:
+            errs.append(f"{log.parent.name}: {n}")
+    report("warn" if errs else "ok", "keine Fehler in ~/.logs heute" if not errs
+           else "Fehler in ~/.logs heute", "\n".join(errs))
+
+    if updates:
+        for name, cmd in (("Repo", "checkupdates"), ("AUR", "yay -Qua"),
+                          ("Flatpak", "flatpak remote-ls --updates --columns=application")):
+            rc, out = sh(cmd + " 2>/dev/null")
+            n = len(out.splitlines()) if out else 0
+            report("warn" if n else "ok", f"{name}: {n} Updates" if n else f"{name}: aktuell")
+
+
+def main() -> int:
+    check_matugen()
+    check_hyprland()
+    check_toolkits()
+    check_dotfiles()
+    check_system("--updates" in sys.argv)
+    print()
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

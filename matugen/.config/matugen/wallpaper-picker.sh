@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Rofi-Wallpaper-Picker mit Vorschaubildern → matugen (Farben + awww via wallpaper.sh)
+# Rofi-Wallpaper-Picker mit Vorschaubildern → wallthemes (gecachtes Matugen-Theme + awww)
 source "$HOME/.config/scripts/log.sh"
 
 WALL_DIR="$HOME/Pictures/wallpapers"
@@ -47,4 +47,4 @@ if [[ -z "$img" ]]; then
 fi
 
 log_info "selected: $img"
-matugen image "$img" --source-color-index 0 || log_error "matugen failed for: $img"
+wallthemes "$img" || log_error "wallthemes failed for: $img"
