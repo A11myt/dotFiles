@@ -27,8 +27,10 @@ post_hook = 'gsettings set org.gnome.desktop.interface gtk-theme ""; gsettings s
 [templates.gtk4]
 input_path = '~/.config/matugen/templates/gtk4-colors.css'
 output_path = '~/.config/gtk-4.0/colors.css'
-# Portal neu starten → Datei-Auswahldialoge übernehmen die Farben; Nautilus neu laden
-post_hook = 'gsettings set org.gnome.desktop.interface color-scheme prefer-{{mode}}; systemctl --user restart xdg-desktop-portal-gtk 2>/dev/null; pgrep -x nautilus >/dev/null && nautilus -q; true'
+# Portal neu starten → Datei-Auswahldialoge übernehmen die Farben.
+# GTK4 liest gtk.css nur beim Start: Nautilus nur beenden, wenn er ohne Fenster im
+# Hintergrund läuft – offene Fenster bleiben, neue Farben gibt es beim nächsten Öffnen
+post_hook = 'gsettings set org.gnome.desktop.interface color-scheme prefer-{{mode}}; systemctl --user restart xdg-desktop-portal-gtk 2>/dev/null; if pgrep -x nautilus >/dev/null && ! hyprctl clients -j | jq -e "any(.[]; .class == \"org.gnome.Nautilus\")" >/dev/null; then nautilus -q; fi; true'
 
 [templates.qt5ct]
 input_path = '~/.config/matugen/templates/qtct-colors.conf'
