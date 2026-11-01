@@ -4,6 +4,7 @@ node_modules/
 @girs/
 *.bak
 *.log
+__pycache__/
 
 # ── Von Matugen generiert (ändert sich bei jedem Wallpaper) ──────
 alacritty/.config/alacritty/colors/matugen.toml
@@ -14,6 +15,14 @@ swaync/.config/swaync/colors/
 wlogout/.config/wlogout/styles/colors.css
 ags/.config/ags/colors.scss
 nvim/.config/nvim/lua/config/matugen_colors.lua
+tmux/.config/tmux/colors.conf
+gtk/.config/gtk-3.0/colors.css
+gtk/.config/gtk-4.0/colors.css
+qt/.config/qt5ct/colors/
+qt/.config/qt6ct/colors/
+
+# ── Persönlich / maschinenspezifisch ─────────────────────────────
+gtk/.config/gtk-3.0/bookmarks
 
 # ── Von Hyprland autogeneriert ───────────────────────────────────
 hypr/.config/hypr/hyprland.conf

@@ -86,6 +86,8 @@ python-pipx
 python-pytest
 qalculate-gtk
 qt5-wayland
+qt5ct
+qt6ct
 ripgrep
 ristretto
 rofi

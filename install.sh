@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$(realpath "$0")")"
 REPO="$PWD"
 
-STOW_PKGS=(hypr ags alacritty nvim rofi tmux swaync wlogout matugen scripts pacman zsh git bin)
+STOW_PKGS=(hypr ags alacritty nvim rofi tmux swaync wlogout matugen scripts pacman zsh git bin gtk qt)
 
 log() { printf '\033[1;33m==>\033[0m %s\n' "$*"; }
 
