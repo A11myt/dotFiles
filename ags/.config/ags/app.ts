@@ -6,7 +6,7 @@ import Bar from "./widget/Bar"
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 
-const HOME = GLib.get_home_dir()
+const AGS_DIR = `${GLib.get_home_dir()}/.config/ags`
 
 app.start({
     instanceName: "bar",
@@ -14,13 +14,14 @@ app.start({
     main() {
         app.get_monitors().map(Bar)
 
-        // Auto-restart when matugen regenerates colors
-        monitorFile(`${HOME}/.config/ags/colors.scss`, (_path, event) => {
+        // Matugen schreibt colors.scss → CSS live neu kompilieren und anwenden.
+        // Kein Neustart: Update-Check, Wetter und Widget-Zustand bleiben erhalten,
+        // die transition in style.scss blendet die Farben weich über.
+        monitorFile(`${AGS_DIR}/colors.scss`, (_path, event) => {
             if (event !== Gio.FileMonitorEvent.CHANGES_DONE_HINT) return
-            execAsync([
-                "bash", "-c",
-                `pkill -f "gjs.*ags.js" 2>/dev/null; sleep 0.4 && ags run ${HOME}/.config/ags/app.ts >> ${HOME}/.logs/ags.log 2>&1 &`,
-            ]).catch(() => {})
+            execAsync(["sass", "--no-source-map", `--load-path=${AGS_DIR}`, `${AGS_DIR}/style.scss`])
+                .then(css => app.apply_css(css, true))
+                .catch(e => printerr(`ags: CSS-Reload fehlgeschlagen: ${e}`))
         })
     },
 })

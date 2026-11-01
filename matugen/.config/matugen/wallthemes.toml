@@ -1,0 +1,17 @@
+# wallthemes: welche post_hooks dürfen warten?
+#
+# Alle Dateien werden sofort geschrieben. Nur die Hooks (App neu laden/anwenden) werden
+# aufgeteilt: Läuft eine der genannten Apps gerade → sofort. Sonst → still im Hintergrund
+# nach `delay` Sekunden, mit niedriger Priorität und entprellt (nur der letzte Wechsel zählt).
+# Templates, die hier nicht stehen, laufen immer sofort.
+
+delay = 20
+
+[defer]
+# Template = Prozessnamen (wie in /proc/<pid>/comm), oder "always"
+steam        = "always"            # Skin greift erst beim nächsten Steam-Start
+pywalfox     = ["firefox"]
+vscode       = ["code"]
+tmux         = ["tmux: server"]
+nvim         = ["nvim", "godot"]
+folder-icons = ["nautilus"]

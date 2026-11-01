@@ -63,7 +63,7 @@ output_path = '~/Obsidian/.obsidian/snippets/matugen.css'
 [templates.steam]
 input_path = '~/.config/matugen/templates/steam.css'
 output_path = '~/.var/app/io.github.Foldex.AdwSteamGtk/config/AdwSteamGtk/custom.css'
-post_hook = '~/.config/matugen/steam-skin.sh 60'  # verzögert + entprellt, siehe Skript
+post_hook = 'flatpak run io.github.Foldex.AdwSteamGtk -i'  # läuft per wallthemes.toml im Hintergrund
 
 [templates.nvim]
 input_path = '~/.config/matugen/templates/nvim.lua'
@@ -73,7 +73,7 @@ post_hook = 'pkill -SIGUSR1 nvim; python3 ~/.config/matugen/godot-theme.py'
 [templates.ags]
 input_path = '~/.config/matugen/templates/ags-colors.scss'
 output_path = '~/.config/ags/colors.scss'
-post_hook = 'nohup /home/jason/.config/ags/restart.sh &'
+# kein Hook: AGS beobachtet colors.scss und lädt das CSS live neu (app.ts)
 
 [templates.regreet]
 input_path = '~/.config/matugen/templates/regreet.css'

@@ -7,17 +7,18 @@ type WeatherData = { text: string; tooltip: string }
 
 const SCRIPT = `${GLib.get_home_dir()}/.config/ags/scripts/weather-openmeteo.sh`
 
+// einmal pro Prozess, nicht pro Monitor
+const [data, setData] = createState<WeatherData>({ text: "?", tooltip: "loading..." })
+
+const fetch = () =>
+    execAsync(["bash", SCRIPT])
+        .then(out => setData(JSON.parse(out) as WeatherData))
+        .catch(() => {})
+
+fetch()
+interval(600_000, fetch)
+
 export default function Weather() {
-    const [data, setData] = createState<WeatherData>({ text: "?", tooltip: "loading..." })
-
-    const fetch = () =>
-        execAsync(["bash", SCRIPT])
-            .then(out => setData(JSON.parse(out) as WeatherData))
-            .catch(() => {})
-
-    fetch()
-    interval(600_000, fetch)
-
     const text = createMemo(() => data().text)
     const tip  = createMemo(() => data().tooltip)
 

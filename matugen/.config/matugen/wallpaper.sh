@@ -21,8 +21,13 @@ fi
 mkdir -p "$HOME/.cache/wallpaper-picker"
 ln -sf "$(realpath "$1")" "$HOME/.cache/wallpaper-picker/current"
 
-# Login-Hintergrund (ReGreet) – greeter-User kann ~ nicht lesen, daher Kopie
+# Login-Hintergrund (ReGreet) – greeter-User kann ~ nicht lesen, daher Kopie.
+# Erst beim nächsten Login sichtbar → abgekoppelt, damit der Farbwechsel nicht darauf wartet
 if [[ -w /var/lib/greeter-theme ]]; then
-    magick "$1[0]" -resize '2560x1440>' -quality 90 /var/lib/greeter-theme/wallpaper.jpg 2>/dev/null \
-        || log_warn "greeter wallpaper copy failed for: $1"
+    (
+        nice -n 10 magick "$1[0]" -resize '2560x1440>' -quality 90 jpg:/var/lib/greeter-theme/wallpaper.jpg.tmp 2>/dev/null \
+            && mv /var/lib/greeter-theme/wallpaper.jpg.tmp /var/lib/greeter-theme/wallpaper.jpg \
+            || log_warn "greeter wallpaper copy failed for: $1"
+    ) </dev/null >/dev/null 2>&1 &
+    disown
 fi

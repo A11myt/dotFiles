@@ -107,8 +107,15 @@ alias jrun='./gradlew build -q && java -cp app/build/classes/java/main'
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-source /usr/share/nvm/init-nvm.sh
-export PATH="$HOME/.local/bin:$PATH"
+# nvm erst beim ersten Aufruf laden (spart ~1 s pro Terminal).
+# Die Default-Node-Version liegt trotzdem sofort im PATH (node/npm, Mason-LSPs in nvim).
+export NVM_DIR="$HOME/.nvm"
+() {
+  local -a v=( $NVM_DIR/versions/node/v${$(<$NVM_DIR/alias/default 2>/dev/null)#v}*(N/nOn) )
+  (( $#v )) && path=($v[1]/bin $path)
+}
+nvm() { unfunction nvm; source /usr/share/nvm/init-nvm.sh; nvm "$@" }
+
 export PATH="$HOME/.local/bin:$PATH"
 . "/home/jason/.deno/env"
 
@@ -119,3 +126,7 @@ export PATH="$PATH:$HOME/flutter/bin"
 # flyctl (Fly.io CLI) — installed 2026-09-22
 export FLYCTL_INSTALL="$HOME/.fly"
 export PATH="$FLYCTL_INSTALL/bin:$PATH"
+
+# zuletzt: doppelte PATH-Einträge entfernen (auch die aus deno/flutter/fly oben)
+typeset -U path
+path=($path)

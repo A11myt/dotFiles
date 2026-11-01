@@ -8,6 +8,12 @@ LON="9.00"
 CACHE="/tmp/ags-weather.json"
 URL="https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current_weather=true"
 
+# Cache jünger als 9 min → kein Netzabruf (Intervall im Widget: 10 min)
+if [[ -f "$CACHE" && -n "$(find "$CACHE" -mmin -9 2>/dev/null)" ]]; then
+  cat "$CACHE"
+  exit 0
+fi
+
 JSON="$(curl -fsS --connect-timeout 2 --max-time 3 "$URL" 2>/dev/null)"
 RC=$?
 

@@ -98,8 +98,23 @@ def check_matugen() -> None:
     if unknown:
         report("warn", "Hook mit Platzhalter, den wallthemes nicht ersetzt", "\n".join(unknown))
 
+    rules_file = HOME / ".config/matugen/wallthemes.toml"
+    if rules_file.exists():
+        try:
+            defer = tomllib.loads(rules_file.read_text()).get("defer", {})
+            unknown = [n for n in defer if n not in templates]
+            no_hook = [n for n in defer if n in templates and "post_hook" not in templates[n]]
+            if unknown or no_hook:
+                report("warn", "wallthemes.toml: Regeln ohne passendes Template/Hook",
+                       "\n".join([f"{n}: kein Template" for n in unknown]
+                                 + [f"{n}: Template ohne post_hook" for n in no_hook]))
+            else:
+                report("ok", f"wallthemes.toml: {len(defer)} Hintergrund-Regeln passen")
+        except Exception as e:  # noqa: BLE001
+            report("fail", f"wallthemes.toml nicht lesbar: {e}")
+
     if WALLTHEMES.exists():
-        orphans = [d.name for d in WALLTHEMES.iterdir()
+        orphans =[d.name for d in WALLTHEMES.iterdir()
                    if d.is_dir() and (d / "image").exists()
                    and not Path((d / "image").read_text().strip()).exists()]
         if orphans:
