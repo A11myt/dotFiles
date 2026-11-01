@@ -19,6 +19,7 @@ config.toml laufen parallel. config.toml bleibt die einzige Quelle für Template
 Hooks für Apps, die gerade nicht laufen, werden still im Hintergrund nachgeholt
 (Regeln in ~/.config/matugen/wallthemes.toml).
 """
+import fcntl
 import hashlib
 import json
 import os
@@ -35,6 +36,7 @@ HOME = Path.home()
 CONFIG = HOME / ".config/matugen/config.toml"
 RULES = HOME / ".config/matugen/wallthemes.toml"
 DEFER_TOKEN = HOME / ".cache/matugen/wallthemes-deferred.token"
+DEFER_LOCK = HOME / ".cache/matugen/wallthemes-deferred.lock"
 CACHE = HOME / ".local/share/wallthemes"
 WALL_DIR = HOME / "Pictures/wallpapers"
 LOG = HOME / ".logs/wallthemes" / f"{datetime.now():%Y-%m-%d}.log"
@@ -219,6 +221,10 @@ def run_deferred(token: str, delay: int, image: Path, names: list[str]) -> int:
     os.nice(10)
     if delay:
         time.sleep(delay)
+    # ein abgebrochener Vorgänger beendet noch seinen laufenden Hook → darauf warten,
+    # sonst laufen z. B. zwei AdwSteamGtk-Instanzen gleichzeitig und kollidieren über D-Bus
+    lock = DEFER_LOCK.open("w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
     cfg = load_config()
     names = [n for n in names if cfg.get("templates", {}).get(n, {}).get("post_hook")]
     t0 = time.monotonic()
