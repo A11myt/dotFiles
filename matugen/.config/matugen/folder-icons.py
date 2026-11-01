@@ -83,9 +83,13 @@ def build(color: str) -> None:
         "[Icon Theme]\n"
         "Name=Papirus-Matugen\n"
         "Comment=Papirus-Dark mit Ordnerfarbe aus Matugen (generiert)\n"
-        "Inherits=Papirus-Dark,Papirus,breeze-dark,hicolor\n"
+        # nur Papirus-Dark: enthält Papirus schon per Symlink. Papirus zusätzlich zu erben
+        # lädt den riesigen Index doppelt (+~2 s Start pro GTK4-App)
+        "Inherits=Papirus-Dark,hicolor\n"
         f"Directories={','.join(dirs)}\n\n" + sections
     )
+    # ohne Cache durchsucht GTK das Theme bei jedem App-Start
+    subprocess.run(["gtk-update-icon-cache", "-f", "-q", "-t", str(THEME)], check=False)
 
 
 def main() -> int:
