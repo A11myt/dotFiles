@@ -198,11 +198,16 @@ def run_hooks(cfg: dict, image: Path, names: list[str]) -> int:
     return failed
 
 
-def schedule_deferred(image: Path, names: list[str], delay: int) -> None:
-    """Startet einen abgekoppelten Lauf für die übrigen Hooks; der neueste Wechsel gewinnt."""
+def claim_token() -> str:
+    """Markiert diesen Wechsel als den neuesten; ältere Hintergrund-Läufe brechen dann ab."""
     token = str(time.time_ns())
     DEFER_TOKEN.parent.mkdir(parents=True, exist_ok=True)
     DEFER_TOKEN.write_text(token)
+    return token
+
+
+def schedule_deferred(image: Path, names: list[str], delay: int, token: str) -> None:
+    """Startet einen abgekoppelten Lauf für die übrigen Hooks."""
     if not names:
         return
     subprocess.Popen([sys.executable, __file__, "--deferred", token, str(delay), str(image), *names],
@@ -212,13 +217,19 @@ def schedule_deferred(image: Path, names: list[str], delay: int) -> None:
 
 def run_deferred(token: str, delay: int, image: Path, names: list[str]) -> int:
     os.nice(10)
-    time.sleep(delay)
-    if not DEFER_TOKEN.exists() or DEFER_TOKEN.read_text() != token:
-        return 0  # inzwischen neues Wallpaper gewählt, dessen Lauf übernimmt
+    if delay:
+        time.sleep(delay)
     cfg = load_config()
     names = [n for n in names if cfg.get("templates", {}).get(n, {}).get("post_hook")]
     t0 = time.monotonic()
-    failed = run_hooks(cfg, image, names)
+    failed = 0
+    # nacheinander statt parallel: hält die Last klein; vor jedem Hook prüfen,
+    # ob inzwischen ein neueres Wallpaper gewählt wurde – dann übernimmt dessen Lauf
+    for name in names:
+        if not DEFER_TOKEN.exists() or DEFER_TOKEN.read_text() != token:
+            log("INFO", f"{image.name}: Hintergrund-Lauf abgebrochen (neueres Wallpaper)")
+            return 0
+        failed += run_hooks(cfg, image, [name])
     log("INFO", f"{image.name}: Hintergrund-Hooks {', '.join(names)} "
                 f"({time.monotonic() - t0:.1f} s, {failed} Fehler)")
     return 1 if failed else 0
@@ -235,6 +246,7 @@ def set_wallpaper(cfg: dict, image: Path) -> subprocess.Popen | None:
 
 def apply(image: Path, refresh: bool) -> int:
     t0 = time.monotonic()
+    token = claim_token()
     cfg = load_config()
     wp = set_wallpaper(cfg, image)  # sofort, die Übergangsanimation läuft parallel
     try:
@@ -245,8 +257,8 @@ def apply(image: Path, refresh: bool) -> int:
     t_cache = time.monotonic() - t0
     missing = install(target, cfg)
     now, later, delay = split_hooks(cfg)
-    schedule_deferred(image, later, delay)
     failed = run_hooks(cfg, image, now)
+    schedule_deferred(image, later, delay, token)  # direkt danach, still und mit niedriger Priorität
     if wp:
         wp.wait(timeout=HOOK_TIMEOUT)
     log("INFO", f"{image.name}: {'Cache' if hit else 'neu gerendert'} ({t_cache:.1f} s), "

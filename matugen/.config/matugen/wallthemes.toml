@@ -1,11 +1,12 @@
 # wallthemes: welche post_hooks dürfen warten?
 #
 # Alle Dateien werden sofort geschrieben. Nur die Hooks (App neu laden/anwenden) werden
-# aufgeteilt: Läuft eine der genannten Apps gerade → sofort. Sonst → still im Hintergrund
-# nach `delay` Sekunden, mit niedriger Priorität und entprellt (nur der letzte Wechsel zählt).
+# aufgeteilt: Läuft eine der genannten Apps gerade → sofort. Sonst → still im Hintergrund,
+# direkt nachdem die offenen Apps fertig sind, mit niedriger Priorität und entprellt
+# (wählst du währenddessen ein neues Wallpaper, bricht der alte Lauf ab).
 # Templates, die hier nicht stehen, laufen immer sofort.
 
-delay = 20
+delay = 0   # Sekunden Wartezeit vor dem Hintergrund-Lauf
 
 [defer]
 # Template = Prozessnamen (wie in /proc/<pid>/comm), oder "always"
