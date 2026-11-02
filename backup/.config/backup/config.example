@@ -9,6 +9,8 @@
 # RESTIC_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:23/restic-thinkpad"
 # SECRET_VARS=()
 
-# Google Drive über rclone (vorher `rclone config` → Remote "gdrive"):
+# Google Drive über rclone (vorher `rclone config` → Remote "gdrive", mit EIGENER client_id –
+# die gemeinsame von rclone ist stark gedrosselt und läuft 2026 aus):
 # RESTIC_REPOSITORY="rclone:gdrive:restic-thinkpad"
 # SECRET_VARS=()
+# export RESTIC_PACK_SIZE=64   # weniger, größere Dateien → deutlich schneller bei Drive
