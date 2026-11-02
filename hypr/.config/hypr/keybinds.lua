@@ -1,7 +1,7 @@
 local mainMod     = "SUPER"
 local terminal    = "alacritty"
 local fileManager = "nautilus"
-local menu        = "pgrep -x rofi >/dev/null && pkill -x rofi || rofi -show drun"
+local menu        = "qs ipc call launcher apps"          -- Launcher (Quickshell)
 
 -- compositor
 hl.bind(mainMod .. " + C", hl.dsp.window.close())
@@ -25,7 +25,7 @@ hl.bind(mainMod .. " + grave",        hl.dsp.exec_cmd("~/.local/bin/dropdown")) 
 hl.bind(mainMod .. " + TAB",          hl.dsp.exec_cmd("qs ipc call overview toggle"))          -- Fensterübersicht
 hl.bind(mainMod .. " + SHIFT + V",    hl.dsp.exec_cmd("qs ipc call panels toggle clipboard"))  -- Zwischenablage-Verlauf
 hl.bind(mainMod .. " + H",            hl.dsp.exec_cmd("hyprpicker -a -n -l"))
-hl.bind(mainMod .. " + W",            hl.dsp.exec_cmd("~/.config/matugen/wallpaper-picker.sh"))
+hl.bind(mainMod .. " + W",            hl.dsp.exec_cmd("qs ipc call launcher wallpapers"))
 
 -- system
 hl.bind(mainMod .. " + l",            hl.dsp.exec_cmd("loginctl lock-session"))

@@ -97,7 +97,7 @@ $mainMod = SUPER
 | ---------------- | ------------ | ---------------------------- |
 | SUPER + Q        | Terminal     | alacritty                    |
 | SUPER + E        | File Manager | thunar                       |
-| SUPER + R        | Launcher     | wofi / rofi                  |
+| SUPER + R        | Launcher     | Quickshell                  |
 | SUPER + L        | Lock         | hyprlock                     |
 | SUPER + CTRL + O | Obsidian     | flatpak md.obsidian.Obsidian |
 
@@ -220,7 +220,7 @@ Accent nur subtil für Hover / Active.
 ```bash
 sudo pacman -S hyprland hyprlock hypridle
 sudo pacman -S quickshell            # Oberfläche: Leiste, Benachrichtigungen, Panels
-sudo pacman -S alacritty nautilus rofi
+sudo pacman -S alacritty nautilus
 sudo pacman -S grim slurp wl-clipboard cliphist
 sudo pacman -S brightnessctl playerctl
 sudo pacman -S pipewire wireplumber

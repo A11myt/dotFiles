@@ -63,6 +63,7 @@ nano
 nautilus
 neovim
 networkmanager
+noto-fonts-emoji
 npm
 nvm
 nwg-look
@@ -95,8 +96,6 @@ reflector
 restic
 ripgrep
 ristretto
-rofi
-rofi-emoji
 samba
 sassc
 slurp

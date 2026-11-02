@@ -5,6 +5,6 @@ import qs.components
 
 Pill {
     padX: 12
-    onClicked: Quickshell.execDetached(["rofi", "-show", "drun"])
+    onClicked: Quickshell.execDetached(["qs", "ipc", "call", "launcher", "apps"])
     BarText { text: "󰣇"; font.pixelSize: 18; accent: parent.parent.hovered }
 }
