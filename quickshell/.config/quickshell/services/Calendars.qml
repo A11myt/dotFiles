@@ -15,7 +15,8 @@ Singleton {
     readonly property string file: Quickshell.env("HOME") + "/.local/share/quickshell/calendars.json"
     // Farben über den Farbkreis verteilt, ausgehend von der Theme-Farbe → immer unterscheidbar
     function colorOf(cal) {
-        const i = Math.max(0, calendars.findIndex(c => c.name === cal))
+        // eigene Obsidian-Termine bekommen die Farbe nach den abonnierten Kalendern
+        const i = cal === "Obsidian" ? calendars.length : Math.max(0, calendars.findIndex(c => c.name === cal))
         const h = (Theme.primary.hslHue + i * 0.38) % 1
         return Qt.hsla(h, Math.max(0.45, Theme.primary.hslSaturation), Theme.isLight ? 0.45 : 0.72, 1)
     }
@@ -31,6 +32,24 @@ Singleton {
         proc.command = ["python3", "-I", Quickshell.shellDir + "/scripts/ical_events.py", file].concat(force ? ["--refresh"] : [])
         proc.running = true
     }
+    // ── eigene Termine (Notizen in Obsidian/Termine, scripts/termin.py) ──
+    signal saved(string path)
+    function addEvent(ev) {
+        addProc.command = ["python3", "-I", Quickshell.shellDir + "/scripts/termin.py", "add", JSON.stringify(ev)]
+        addProc.running = true
+    }
+    function deleteEvent(path) {
+        Quickshell.execDetached(["python3", "-I", Quickshell.shellDir + "/scripts/termin.py", "delete", path])
+        refreshLater.restart()
+    }
+    function openInObsidian(rel) {
+        Qt.openUrlExternally("obsidian://open?vault=Obsidian&file=" + encodeURIComponent(rel.replace(/\.md$/, "")))
+    }
+    Process {
+        id: addProc
+        stdout: StdioCollector { onStreamFinished: { root.saved(text.trim()); root.refresh(true) } }
+    }
+
     // Termine eines Tages (inkl. mehrtägiger Ganztagstermine)
     function on(day) {
         const a = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime() / 1000, b = a + 86400
@@ -38,7 +57,8 @@ Singleton {
     }
 
     Timer { id: refreshLater; interval: 600; onTriggered: root.refresh(true) }
-    Timer { interval: 15 * 60000; repeat: true; running: root.calendars.length > 0; onTriggered: root.refresh(false) }
+    Timer { interval: 15 * 60000; repeat: true; running: true; onTriggered: root.refresh(false) }
+    Component.onCompleted: refresh(false)   // auch ohne abonnierte Kalender (eigene Obsidian-Termine)
 
     FileView {
         path: root.file

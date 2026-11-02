@@ -11,6 +11,7 @@ wird die letzte gute Kopie genutzt). Die Adressen sind geheim → nie in die Dot
 import hashlib
 import json
 import re
+import subprocess
 import sys
 import time
 import urllib.request
@@ -203,6 +204,14 @@ def main() -> int:
             result += events(fetch(c["url"], "--refresh" in sys.argv), c.get("name", "Kalender"), lo, hi)
         except Exception as e:
             errors.append({"cal": c.get("name", "?"), "error": type(e).__name__})
+    # eigene Termine aus Obsidian (scripts/termin.py, Ordner „Termine“ im Vault)
+    try:
+        r = subprocess.run([sys.executable, "-I", str(Path(__file__).with_name("termin.py")), "list"],
+                           capture_output=True, text=True, timeout=10)
+        lo_t, hi_t = lo.timestamp(), hi.timestamp()
+        result += [e for e in json.loads(r.stdout or "[]") if e["end"] >= lo_t and e["start"] <= hi_t]
+    except (subprocess.TimeoutExpired, ValueError) as e:
+        errors.append({"cal": "Obsidian", "error": type(e).__name__})
     result.sort(key=lambda e: (e["start"], not e["allDay"]))
     print(json.dumps({"events": result, "errors": errors, "time": int(time.time())}, ensure_ascii=False))
     return 0
