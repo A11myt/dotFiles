@@ -12,7 +12,8 @@ if ! awww query 2>/dev/null; then
     sleep 0.5
 fi
 
-if ! awww img "$1" --transition-type center --transition-fps 60; then
+# 30 statt 60 fps: drei Monitore auf der HD 520, sieht kaum anders aus
+if ! awww img "$1" --transition-type center --transition-fps 30; then
     log_error "awww img failed for: $1"
     exit 1
 fi
