@@ -15,6 +15,7 @@ hl.window_rule({
 -- floating windows
 hl.window_rule({ match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" }, float = true })
 hl.window_rule({ match = { class = "^(blueman-manager)$" }, float = true })
+hl.window_rule({ match = { class = "^(floating-term)$" }, float = true, size = "720 420", center = true })   -- kleine Terminals aus der Oberfläche (z. B. Akku-Ladegrenze)
 
 -- opacity rules (format: "active inactive")
 hl.window_rule({ match = { class = "^(Rofi)$" },           opacity = "0.92 0.92" })
@@ -44,6 +45,6 @@ hl.window_rule({
 })
 
 -- Quickshell-Oberfläche: Unschärfe hinter den halbtransparenten Fenstern
-hl.layer_rule({ match = { namespace = "^qs-(bar|notifications|notification-center|osd|quick-settings|calendar|clipboard|power|overview|launcher|settings|media|cheatsheet)$" }, blur = true, ignore_alpha = 0.3 })
+hl.layer_rule({ match = { namespace = "^qs-(bar|notifications|notification-center|osd|quick-settings|calendar|clipboard|power|overview|launcher|settings|media|cheatsheet|sidebar)$" }, blur = true, ignore_alpha = 0.3 })
 -- Screenshot-Standbild sofort zeigen (keine Einblendung, sonst flackert das Bild)
 hl.layer_rule({ match = { namespace = "^qs-screenshot$" }, no_anim = true })
