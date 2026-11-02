@@ -5,7 +5,8 @@ import qs
 import qs.components
 import qs.services
 
-// Kalender unter der Uhr: Monat blättern (Pfeile), Wochennummern, heute markiert
+// Kalender unter der Uhr: Monat blättern (Pfeile), Wochennummern, heute markiert,
+// Punkte an Tagen mit Terminen (Calendars), Klick auf einen Tag zeigt seine Termine
 DropPanel {
     id: root
     panel: "calendar"
@@ -15,7 +16,11 @@ DropPanel {
     property date today: new Date()
     property int month: today.getMonth()
     property int year: today.getFullYear()
-    onShownChanged: if (shown) { today = new Date(); month = today.getMonth(); year = today.getFullYear() }
+    property date selected: new Date()
+    onShownChanged: if (shown) { today = new Date(); selected = today; month = today.getMonth(); year = today.getFullYear(); Calendars.refresh(false) }
+    readonly property var dayEvents: Calendars.on(selected)
+    function sameDay(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate() }
+    function hm(t) { return Qt.formatTime(new Date(t * 1000), "HH:mm") }
     readonly property var de: Qt.locale("de_DE")
     readonly property int rowH: 32
     function shift(d) { const m = month + d; year += Math.floor(m / 12); month = ((m % 12) + 12) % 12 }
@@ -67,19 +72,67 @@ DropPanel {
             Layout.fillWidth: true
             Layout.preferredHeight: root.rowH * 6
             delegate: Rectangle {
+                id: cell
                 required property var model
                 readonly property bool isToday: model.today
+                readonly property bool isSel: root.sameDay(model.date, root.selected)
+                readonly property var evs: Calendars.events.length ? Calendars.on(model.date) : []
                 implicitHeight: 32
                 radius: 8
-                color: isToday ? Theme.primary : (dayMouse.containsMouse ? Theme.surfaceContainerHighest : "transparent")
+                color: isToday ? Theme.primary : isSel ? Theme.primaryContainer : (dayMouse.containsMouse ? Theme.surfaceContainerHighest : "transparent")
                 Text {
                     anchors.centerIn: parent
-                    text: model.day
-                    color: parent.isToday ? Theme.fgOnPrimary : (model.month === grid.month ? Theme.fg : Theme.outline)
+                    anchors.verticalCenterOffset: cell.evs.length ? -3 : 0
+                    text: cell.model.day
+                    color: cell.isToday ? Theme.fgOnPrimary : (cell.model.month === grid.month ? Theme.fg : Theme.outline)
                     font.family: Theme.fontUi; font.pixelSize: Theme.fontPx
-                    font.bold: parent.isToday
+                    font.bold: cell.isToday
                 }
-                MouseArea { id: dayMouse; anchors.fill: parent; hoverEnabled: true }
+                Row {   // bis zu 3 Punkte in Kalenderfarbe
+                    anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 4 }
+                    spacing: 2
+                    Repeater {
+                        model: [...new Set(cell.evs.map(e => e.cal))].slice(0, 3)
+                        delegate: Rectangle { required property string modelData; width: 4; height: 4; radius: 2; color: cell.isToday ? Theme.fgOnPrimary : Calendars.colorOf(modelData) }
+                    }
+                }
+                MouseArea { id: dayMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.selected = cell.model.date }
+            }
+        }
+    }
+
+    // ── Termine des gewählten Tages ──
+    Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.outlineVariant }
+    Text {
+        text: root.sameDay(root.selected, root.today) ? "Heute" : root.de.toString(root.selected, "dddd, d. MMMM")
+        color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; font.bold: true
+    }
+    Text {
+        visible: Calendars.calendars.length === 0
+        Layout.fillWidth: true
+        text: "Noch kein Kalender verbunden – Einstellungen (SUPER+I) → Kalender"
+        color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12; wrapMode: Text.WordWrap
+    }
+    Text {
+        visible: Calendars.calendars.length > 0 && root.dayEvents.length === 0
+        text: Calendars.loading ? "Lade Termine …" : "Keine Termine"
+        color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12
+    }
+    Repeater {
+        model: root.dayEvents
+        delegate: RowLayout {
+            required property var modelData
+            Layout.fillWidth: true
+            spacing: 8
+            Rectangle { Layout.preferredWidth: 3; Layout.fillHeight: true; Layout.minimumHeight: 30; radius: 2; color: Calendars.colorOf(modelData.cal) }
+            ColumnLayout {
+                Layout.fillWidth: true; spacing: 0
+                Text { Layout.fillWidth: true; text: modelData.title; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; elide: Text.ElideRight }
+                Text {
+                    Layout.fillWidth: true
+                    text: (modelData.allDay ? "ganztägig" : root.hm(modelData.start) + " – " + root.hm(modelData.end)) + (modelData.location ? "  ·  " + modelData.location : "")
+                    color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; elide: Text.ElideRight
+                }
             }
         }
     }

@@ -496,6 +496,67 @@ PanelWindow {
                         }
                     }
 
+                    // ═════════════ Kalender ═════════════
+                    ColumnLayout {
+                        visible: win.page === "calendar"
+                        Layout.fillWidth: true
+                        spacing: 22
+                        Section {
+                            title: "Kalender"
+                            sub: "iCal-Adressen (.ics). Google: calendar.google.com → Einstellungen → dein Kalender → „Privatadresse im iCal-Format“ kopieren. Die Adresse ist geheim und wird nur lokal gespeichert (nicht in den Dotfiles)."
+                        }
+                        ColumnLayout { Layout.fillWidth: true; spacing: 8; Repeater {
+                            model: Calendars.calendars
+                            delegate: Rectangle {
+                                id: calRow
+                                required property var modelData
+                                required property int index
+                                Layout.fillWidth: true
+                                implicitHeight: 50; radius: 12
+                                color: Theme.surfaceContainerHigh
+                                RowLayout {
+                                    anchors { fill: parent; leftMargin: 14; rightMargin: 8 }
+                                    spacing: 10
+                                    Rectangle { width: 12; height: 12; radius: 6; color: Calendars.colorOf(calRow.modelData.name) }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 0
+                                        Text { text: calRow.modelData.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx; font.bold: true }
+                                        // nur Anfang der Adresse zeigen (geheim)
+                                        Text { Layout.fillWidth: true; text: calRow.modelData.url.replace(/^(https?:\/\/[^/]+\/).*$/, "$1…") + "  ·  " + Calendars.events.filter(e => e.cal === calRow.modelData.name).length + " Termine"; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; elide: Text.ElideRight }
+                                    }
+                                    Chip { text: "󰅖"; onClicked: Calendars.remove(calRow.index) }
+                                }
+                            }
+                        } }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Field { id: calName; Layout.preferredWidth: 140; placeholder: "Name" }
+                            Field { id: calUrl; Layout.fillWidth: true; placeholder: "https://…/basic.ics"; secret: true; onAccepted: addCal.clicked() }
+                            Chip {
+                                id: addCal
+                                text: "󰐕  Hinzufügen"
+                                selected: true
+                                onClicked: {
+                                    const url = calUrl.text.trim()
+                                    if (!/^(https?|webcal):\/\//.test(url)) return
+                                    Calendars.add(calName.text.trim() || "Kalender " + (Calendars.calendars.length + 1), url)
+                                    calName.text = ""; calUrl.text = ""
+                                }
+                            }
+                        }
+                        Text {
+                            visible: Calendars.errors.length > 0
+                            text: "Nicht erreichbar: " + Calendars.errors.map(e => e.cal + " (" + e.error + ")").join(", ")
+                            color: Theme.error; font.family: Theme.fontUi; font.pixelSize: 12
+                        }
+                        Text {
+                            visible: Calendars.calendars.length > 0
+                            text: Calendars.loading ? "Lade Termine …" : Calendars.events.length + " Termine geladen (5 Wochen zurück bis 10 Wochen voraus)"
+                            color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12
+                        }
+                    }
+
                     // ═════════════ Schrift ═════════════
                     ColumnLayout {
                         visible: win.page === "fonts"
@@ -608,6 +669,7 @@ PanelWindow {
         id: fld
         property alias text: inp.text
         property string placeholder
+        property bool secret: false
         signal accepted()
         implicitHeight: 36; radius: 10
         color: Theme.surfaceContainerHigh
@@ -618,6 +680,7 @@ PanelWindow {
             verticalAlignment: TextInput.AlignVCenter
             clip: true
             color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12
+            echoMode: fld.secret && !activeFocus ? TextInput.Password : TextInput.Normal
             onAccepted: fld.accepted()
             Text { visible: !inp.text; anchors.verticalCenter: parent.verticalCenter; text: fld.placeholder; color: Theme.fgMuted; font: inp.font }
         }

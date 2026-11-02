@@ -30,6 +30,7 @@
     ],
     "widgets": [
         "health",
+        "agenda",
         "weather",
         "system",
         "news",

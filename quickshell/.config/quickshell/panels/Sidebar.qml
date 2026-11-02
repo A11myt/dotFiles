@@ -569,7 +569,65 @@ PanelWindow {
 
     Component {
         id: agendaW
-        Card { Small { text: "󰃭  Termine – kommt gleich" } }
+        Card {
+            id: ag
+            // nächste 7 Tage, nach Tag gruppiert; laufende Termine von heute zählen mit
+            readonly property var days: {
+                const out = [], now = new Date()
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i)
+                    const evs = Calendars.on(d).filter(e => i > 0 || e.allDay || e.end > Date.now() / 1000)
+                    if (evs.length) out.push({ d, i, evs })
+                }
+                return out
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Small { text: "󰃭  Termine"; color: Theme.fgMuted; Layout.fillWidth: true }
+                Text {
+                    text: "󰑓"; color: agRef.containsMouse ? Theme.primary : Theme.fgMuted
+                    font.family: Theme.fontUi; font.pixelSize: 14
+                    RotationAnimation on rotation { running: Calendars.loading; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
+                    MouseArea { id: agRef; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Calendars.refresh(true) }
+                }
+            }
+            Small { visible: Calendars.calendars.length === 0; text: "Noch kein Kalender – Einstellungen (SUPER+I) → Kalender"; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+            Small { visible: Calendars.calendars.length > 0 && ag.days.length === 0; text: Calendars.loading ? "Lade …" : "Keine Termine in den nächsten 7 Tagen" }
+            Small { visible: Calendars.errors.length > 0; text: "Nicht erreichbar: " + Calendars.errors.map(e => e.cal).join(", "); color: Theme.error }
+            Repeater {
+                model: ag.days
+                delegate: ColumnLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 4
+                    Text {
+                        text: modelData.i === 0 ? "Heute" : modelData.i === 1 ? "Morgen" : modelData.d.toLocaleDateString(Qt.locale("de_DE"), "dddd, d. MMM")
+                        color: modelData.i === 0 ? Theme.primary : Theme.fgMuted
+                        font.family: Theme.fontUi; font.pixelSize: 11; font.bold: true
+                    }
+                    Repeater {
+                        model: modelData.evs
+                        delegate: RowLayout {
+                            required property var modelData
+                            readonly property bool running: !modelData.allDay && modelData.start <= Date.now() / 1000 && modelData.end > Date.now() / 1000
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Rectangle { Layout.preferredWidth: 3; Layout.preferredHeight: 28; radius: 2; color: Calendars.colorOf(modelData.cal) }
+                            Text {
+                                Layout.preferredWidth: 44
+                                text: modelData.allDay ? "ganzt." : Qt.formatTime(new Date(modelData.start * 1000), "HH:mm")
+                                color: parent.running ? Theme.primary : Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 0
+                                Text { Layout.fillWidth: true; text: modelData.title; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: parent.parent.running; elide: Text.ElideRight }
+                                Small { Layout.fillWidth: true; visible: text !== ""; text: [parent.parent.running ? "läuft" : "", modelData.location ?? ""].filter(Boolean).join(" · "); elide: Text.ElideRight }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Component {
