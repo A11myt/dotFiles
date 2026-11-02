@@ -34,5 +34,5 @@ hl.window_rule({
 
 -- layer rules
 hl.layer_rule({ match = { namespace = "logout_dialog" },            blur = true })
-hl.layer_rule({ match = { namespace = "swaync-control-center" },    blur = true })
-hl.layer_rule({ match = { namespace = "swaync-notification-window" }, blur = true })
+hl.layer_rule({ match = { namespace = "ags-notification-center" },  blur = true })
+hl.layer_rule({ match = { namespace = "ags-notifications" },        blur = true })

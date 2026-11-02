@@ -3,6 +3,9 @@ import { monitorFile } from "ags/file"
 import { execAsync } from "ags/process"
 import style from "./style.scss"
 import Bar from "./widget/Bar"
+import NotificationPopups from "./widget/NotificationPopups"
+import NotificationCenter from "./widget/NotificationCenter"
+import { toggleCenter } from "./widget/notifications"
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 
@@ -11,8 +14,18 @@ const AGS_DIR = `${GLib.get_home_dir()}/.config/ags`
 app.start({
     instanceName: "bar",
     css: style,
+    // `ags request -i bar toggle-center` (SUPER+A)
+    requestHandler(argv, res) {
+        if (argv[0] === "toggle-center") {
+            toggleCenter()
+            return res("ok")
+        }
+        res(`unbekannt: ${argv.join(" ")}`)
+    },
     main() {
         app.get_monitors().map(Bar)
+        NotificationPopups()
+        NotificationCenter()
 
         // Matugen schreibt colors.scss, fontgen fonts.scss → CSS live neu kompilieren und anwenden.
         // Kein Neustart: Update-Check, Wetter und Widget-Zustand bleiben erhalten,

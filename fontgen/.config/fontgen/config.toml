@@ -38,10 +38,6 @@ output_path = '~/.config/ags/fonts.scss'
 input_path  = '~/.config/fontgen/templates/rofi.rasi'
 output_path = '~/.config/rofi/fonts.rasi'
 
-[templates.swaync]
-input_path  = '~/.config/fontgen/templates/swaync.css'
-output_path = '~/.config/swaync/fonts.css'
-post_hook   = 'swaync-client -rs >/dev/null 2>&1; true'
 
 [templates.hyprlock]    # beim nächsten Sperren
 input_path  = '~/.config/fontgen/templates/hyprlock.conf'

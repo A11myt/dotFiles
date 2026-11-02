@@ -2,7 +2,7 @@
 @use "fonts" as *;   // fontgen: $font-main, $font-dot, $font-size
 
 // ── Design tokens ──────────────────────────────────────────────────────────
-$orange:      #ff6a00;
+$orange:      $primary;   // Akzent aus Matugen (Name historisch, war fest #ff6a00)
 $pill-bg:     rgba($surface_variant, 0.05);
 $pill-hover:  rgba($surface_variant, 0.08);
 $pill-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
@@ -175,4 +175,50 @@ tooltip {
 .PowerProfile {
     @include icon-pill;
     @include hover-orange;
+}
+
+// ── Benachrichtigungen (ersetzt swaync) ────────────────────────────────────
+.NotificationPopups > box { margin: 10px 10px 0 0; min-width: 360px; }
+
+.NotificationCenter .panel {
+    margin: 10px 10px 10px 0;
+    min-width: 380px;
+    padding: 14px;
+    background: rgba($surface_container, 0.96);
+    border: 1px solid $outline_variant;
+    border-radius: 14px;
+
+    .title { font-family: $font-dot; font-size: 15px; }
+    .dnd-label { color: $on_surface_variant; font-size: 12px; }
+    .empty { color: $on_surface_variant; margin: 24px 0; }
+    .clear {
+        padding: 6px; border-radius: 10px; background: $surface_container_high;
+        &:hover { background: $primary; label { color: $on_primary; } }
+    }
+    switch {
+        min-width: 36px; min-height: 18px; border-radius: 10px; background: $surface_container_highest;
+        slider { min-width: 16px; min-height: 16px; margin: 1px; border-radius: 50%; background: $on_surface_variant; }
+        &:checked { background: $primary; slider { background: $on_primary; } }
+    }
+}
+
+.Notif {
+    padding: 10px 12px;
+    background: $surface_container_high;
+    border: 1px solid $outline_variant;
+    border-radius: 12px;
+
+    &.popup { background: rgba($surface_container_high, 0.97); box-shadow: $pill-shadow; }
+    &.critical { border-color: $error; }
+
+    .app { color: $primary; font-size: 11px; }
+    .time { color: $on_surface_variant; font-size: 11px; }
+    .summary { font-weight: bold; }
+    .body { color: $on_surface_variant; }
+    .close { padding: 0 4px; border-radius: 6px; color: $on_surface_variant;
+        &:hover { background: $surface_container_highest; label { color: $error; } } }
+    .actions button {
+        padding: 4px 8px; border-radius: 8px; background: $surface_container_highest;
+        &:hover { background: $primary; label { color: $on_primary; } }
+    }
 }

@@ -1,32 +1,19 @@
-import { createState } from "gnim"
-import { execAsync, subprocess } from "ags/process"
+import { createComputed } from "gnim"
+import { dnd, notifications, toggleCenter } from "./notifications"
 
-// swaync meldet Änderungen selbst (eine JSON-Zeile pro Änderung) → kein Polling
-const ICONS: Record<string, string> = {
-    "notification":              "󱅫",
-    "none":                      "󰂜",
-    "dnd-notification":          "󰂠",
-    "dnd-none":                  "󰪓",
-    "inhibited-notification":    "󱅫",
-    "inhibited-none":            "󰂜",
-    "dnd-inhibited-notification": "󰂠",
-    "dnd-inhibited-none":        "󰪓",
-}
-
-const [icon, setIcon] = createState("󰂜")
-
-subprocess(["swaync-client", "-swb"], line => {
-    try {
-        const { alt } = JSON.parse(line) as { alt: string }
-        setIcon(ICONS[alt] ?? "󰂜")
-    } catch { /* unvollständige Zeile ignorieren */ }
-})
-
+// Glocke in der Leiste: Zustand direkt aus AstalNotifd, Klick öffnet die Zentrale
 export default function Notification() {
+    const icon = createComputed([notifications, dnd], (ns, d) => {
+        const has = ns.length > 0
+        if (d) return has ? "󰂠" : "󰪓"
+        return has ? "󱅫" : "󰂜"
+    })
+
     return (
         <button
             class="Notification"
-            onClick={() => execAsync("swaync-client -t -sw")}
+            tooltipText={notifications(ns => ns.length === 0 ? "Keine Benachrichtigungen" : `${ns.length} Benachrichtigungen`)}
+            onClick={toggleCenter}
         >
             <label label={icon} />
         </button>
