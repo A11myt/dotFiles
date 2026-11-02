@@ -132,6 +132,20 @@ def check_hyprland() -> None:
         report("fail" if out else "ok",
                "keine Config-Fehler" if not out else "hyprctl meldet Config-Fehler", out)
 
+    # Safe Mode: start-hyprland startet nach einem Absturz ohne Config/Autostart neu –
+    # sieht fast normal aus, nur Leiste, Wallpaper usw. fehlen
+    rc, pid = sh("pgrep -x Hyprland")
+    if pid.strip():
+        try:
+            args = Path(f"/proc/{pid.split()[0]}/cmdline").read_text().split("\0")
+            safe = "--safe-mode" in args
+            report("fail" if safe else "ok",
+                   "Hyprland läuft im Safe Mode (letzter Start abgestürzt)" if safe
+                   else "Hyprland im normalen Modus",
+                   "Logs: ~/.logs/hypr-session/ bzw. $XDG_RUNTIME_DIR/hypr/*/hyprland.log" if safe else "")
+        except OSError:
+            pass
+
     if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
         # Keybinds laufen mit der Umgebung von Hyprland, nicht mit der der Shell
         probe = Path(f"/tmp/dotdoctor-path-{os.getuid()}")
