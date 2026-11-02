@@ -3,20 +3,26 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Services.Mpris
 import qs
 import qs.components
 import qs.services
 
-// Info-Leiste rechts (SUPER+B): Uhrzeit, Wetter, System mit Verläufen, Prozesse, Akkus.
-// Messwerte laufen nur, solange die Leiste offen ist (Verlauf bleibt erhalten).
+// Info-Leiste rechts (SUPER+B): Uhrzeit oben, darunter frei wählbare Widgets
+// (Config.widgets in config.json). Stift oben rechts = Bearbeiten: ↑ ↓ ✕ pro Widget,
+// unten „Widget hinzufügen“. Messwerte laufen im Hintergrund weiter (seltener).
 PanelWindow {
     id: win
     property bool open: false
+    property bool editing: false
 
     visible: open || closing.running
     onOpenChanged: {
-        if (open) { Panels.close(); scroller.contentY = 0; fast.restart(); fastProc.running = true; slowProc.running = true; weatherProc.running = true; keys.forceActiveFocus() }
-        else closing.restart()
+        if (open) {
+            Panels.close(); scroller.contentY = 0; fast.restart()
+            fastProc.running = true; slowProc.running = true; weatherProc.running = true; loadNews(false)
+            keys.forceActiveFocus()
+        } else { closing.restart(); editing = false }
     }
     Timer { id: closing; interval: Theme.anim + 40 }
 
@@ -29,14 +35,20 @@ PanelWindow {
     color: "transparent"
     implicitWidth: 400
 
-    IpcHandler { target: "sidebar"; function toggle(): void { win.open = !win.open } }
+    IpcHandler {
+        target: "sidebar"
+        function toggle(): void { win.open = !win.open }
+        function edit(): void { win.open = true; win.editing = !win.editing }
+    }
     Connections { target: Panels; function onOpenChanged() { if (Panels.open !== "none") win.open = false } }
+
+    function has(w) { return Config.widgets.indexOf(w) >= 0 }
 
     // ── Messwerte ────────────────────────────────────────────────────────────
     readonly property int histLen: 45
     property var cpuHist: []
     property var memHist: []
-    property var netHist: []          // Bytes/s (rx+tx)
+    property var netHist: []
     property real cpu: 0
     property real memUsed: 0
     property real memTotal: 1
@@ -49,7 +61,7 @@ PanelWindow {
 
     function push(arr, v) { const a = arr.concat([v]); return a.length > histLen ? a.slice(a.length - histLen) : a }
 
-    // offen alle 2 s, sonst alle 5 s weiter messen → beim Öffnen ist schon ein Verlauf da
+    // offen alle 2 s, sonst alle 5 s → beim Öffnen ist schon ein Verlauf da
     Timer { id: fast; interval: win.open ? 2000 : 5000; repeat: true; running: true; onTriggered: fastProc.running = true }
     Process {
         id: fastProc
@@ -77,7 +89,7 @@ PanelWindow {
     }
 
     property var slow: ({ procs: [], disk: { size: 1, used: 0 }, bats: [] })
-    Timer { interval: 10000; repeat: true; running: win.open; onTriggered: slowProc.running = true }
+    Timer { interval: 10000; repeat: true; running: win.open && (win.has("processes") || win.has("battery") || win.has("system")); onTriggered: slowProc.running = true }
     Process {
         id: slowProc
         command: [Quickshell.shellDir + "/scripts/slowstat.sh"]
@@ -85,11 +97,41 @@ PanelWindow {
     }
 
     property var wx: ({})
-    Timer { interval: 15 * 60000; repeat: true; running: win.open; onTriggered: weatherProc.running = true }
+    Timer { interval: 15 * 60000; repeat: true; running: win.open && win.has("weather"); onTriggered: weatherProc.running = true }
     Process {
         id: weatherProc
         command: [Quickshell.shellDir + "/scripts/forecast.sh"]
         stdout: StdioCollector { onStreamFinished: { try { win.wx = JSON.parse(text) } catch (e) {} } }
+    }
+
+    // ── Nachrichten ──────────────────────────────────────────────────────────
+    property var news: []
+    property bool newsLoading: false
+    property bool newsMore: false
+    function loadNews(refresh) {
+        if (!has("news") || newsProc.running) return
+        newsLoading = true
+        newsProc.command = ["python3", "-I", Quickshell.shellDir + "/scripts/news.py", JSON.stringify(Config.feeds)].concat(refresh ? ["--refresh"] : [])
+        newsProc.running = true
+    }
+    Process {
+        id: newsProc
+        stdout: StdioCollector { onStreamFinished: { try { win.news = JSON.parse(text) } catch (e) {} win.newsLoading = false } }
+    }
+    Timer { interval: 15 * 60000; repeat: true; running: win.open && win.has("news"); onTriggered: win.loadNews(false) }
+    Connections { target: Config; function onFeedsChanged() { if (win.open) win.loadNews(false) } }
+    readonly property var shownNews: news.filter(n => n.error || Config.newsHidden.indexOf(n.link) < 0)
+                                         .slice(0, newsMore ? Config.newsCount * 3 : Config.newsCount)
+    function hideNews(link) { Config.set("newsHidden", Config.newsHidden.concat([link]).slice(-300)) }
+    function ago(t) {
+        if (!t) return ""
+        const m = Math.round((Date.now() / 1000 - t) / 60)
+        return m < 1 ? "gerade" : m < 60 ? `vor ${m} min` : m < 24 * 60 ? `vor ${Math.round(m / 60)} h` : `vor ${Math.round(m / 1440)} Tagen`
+    }
+    function sourceColor(name) {
+        const c = [Theme.primary, Theme.tertiary, Theme.secondary, Theme.error]
+        let h = 0; for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) % 997
+        return c[h % c.length]
     }
 
     // ── Hilfen ───────────────────────────────────────────────────────────────
@@ -112,7 +154,7 @@ PanelWindow {
     }
     readonly property var hours: {
         const h = wx.hourly; if (!h) return []
-        const now = new Date(); let i = h.time.findIndex(t => new Date(t) >= now)
+        const now = new Date(); const i = h.time.findIndex(t => new Date(t) >= now)
         if (i < 0) return []
         const out = []
         for (let k = i; k < Math.min(i + 24, h.time.length); k += 3)
@@ -130,6 +172,13 @@ PanelWindow {
     readonly property real weekMin: Math.min(...days.map(d => d.min), 99)
     readonly property real weekMax: Math.max(...days.map(d => d.max), -99)
 
+    function move(w, d) {
+        const a = Config.widgets.slice(), i = a.indexOf(w), j = i + d
+        if (i < 0 || j < 0 || j >= a.length) return
+        a[i] = a[j]; a[j] = w
+        Config.set("widgets", a)
+    }
+
     SystemClock { id: clock; precision: SystemClock.Minutes }
 
     // ── Oberfläche ───────────────────────────────────────────────────────────
@@ -146,7 +195,7 @@ PanelWindow {
             x: win.open ? 0 : 40
             Behavior on x { NumberAnimation { duration: Theme.anim; easing.type: Easing.OutCubic } }
         }
-        Item { id: keys; focus: true; Keys.onEscapePressed: win.open = false }
+        Item { id: keys; focus: true; Keys.onEscapePressed: win.editing ? win.editing = false : win.open = false }
 
         Flickable {
             id: scroller
@@ -160,7 +209,7 @@ PanelWindow {
                 width: parent.width
                 spacing: 14
 
-                // ── Kopf ──
+                // ── Kopf (fest) ──
                 RowLayout {
                     Layout.fillWidth: true
                     ColumnLayout {
@@ -170,178 +219,360 @@ PanelWindow {
                     }
                     Item { Layout.fillWidth: true }
                     ColumnLayout {
-                        spacing: 2
-                        Layout.alignment: Qt.AlignTop | Qt.AlignRight
-                        Text { Layout.alignment: Qt.AlignRight; text: "󰔟 " + Math.floor(win.uptime / 3600) + " h " + Math.floor(win.uptime % 3600 / 60) + " min"; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11 }
-                        Text { Layout.alignment: Qt.AlignRight; text: "seit dem Start"; color: Theme.outline; font.family: Theme.fontUi; font.pixelSize: 10 }
-                    }
-                }
-
-                // ── Wetter ──
-                Card {
-                    visible: win.wx.current !== undefined
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 10
-                        RowLayout {
-                            Layout.fillWidth: true
-                            spacing: 12
-                            Text { text: win.wxIcon(win.wx.current?.weather_code ?? 3, win.wx.current?.is_day ?? 1); color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 40 }
-                            ColumnLayout {
-                                spacing: 0
-                                Text { text: Math.round(win.wx.current?.temperature_2m ?? 0) + "°"; color: Theme.fg; font.family: Theme.fontAccent; font.pixelSize: 30 }
-                                Text { text: win.wxText(win.wx.current?.weather_code ?? 3); color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12 }
-                            }
-                            Item { Layout.fillWidth: true }
-                            ColumnLayout {
-                                spacing: 1
-                                Layout.alignment: Qt.AlignRight
-                                Small { Layout.alignment: Qt.AlignRight; text: "gefühlt " + Math.round(win.wx.current?.apparent_temperature ?? 0) + "°" }
-                                Small { Layout.alignment: Qt.AlignRight; text: "󰖝 " + Math.round(win.wx.current?.wind_speed_10m ?? 0) + " km/h  󰖎 " + (win.wx.current?.relative_humidity_2m ?? 0) + " %" }
-                                Small { Layout.alignment: Qt.AlignRight; text: "󰖜 " + (win.wx.daily?.sunrise?.[0]?.slice(11) ?? "") + "  󰖛 " + (win.wx.daily?.sunset?.[0]?.slice(11) ?? "") }
-                            }
-                        }
-                        // nächste Stunden
-                        RowLayout {
-                                    id: hoursRow
-                            Layout.fillWidth: true
-                            spacing: 0
-                            Repeater {
-                                model: win.hours
-                                delegate: ColumnLayout {
-                                    required property var modelData
-                                    Layout.preferredWidth: hoursRow.width / Math.max(1, win.hours.length)
-                                    spacing: 2
-                                    Small { Layout.alignment: Qt.AlignHCenter; text: modelData.t }
-                                    Text { Layout.alignment: Qt.AlignHCenter; text: win.wxIcon(modelData.code, modelData.day); color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 18 }
-                                    Text { Layout.alignment: Qt.AlignHCenter; text: modelData.temp + "°"; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12 }
-                                    Small { Layout.alignment: Qt.AlignHCenter; text: modelData.rain >= 20 ? "󰖗" + modelData.rain + "%" : " "; color: Theme.tertiary }
-                                }
-                            }
-                        }
-                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.outlineVariant }
-                        // Tage mit Temperaturspanne
-                        Repeater {
-                            model: win.days
-                            delegate: RowLayout {
-                                required property var modelData
-                                Layout.fillWidth: true
-                                spacing: 8
-                                Text { Layout.preferredWidth: 78; text: modelData.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12 }
-                                Text { Layout.preferredWidth: 22; text: win.wxIcon(modelData.code, 1); color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 15 }
-                                Small { Layout.preferredWidth: 36; text: modelData.rain >= 20 ? modelData.rain + "%" : ""; color: Theme.tertiary }
-                                Small { Layout.preferredWidth: 26; horizontalAlignment: Text.AlignRight; text: modelData.min + "°" }
-                                Item {
-                                    Layout.fillWidth: true; implicitHeight: 6
-                                    Rectangle { anchors.fill: parent; radius: 3; color: Theme.surfaceContainerHighest }
-                                    Rectangle {
-                                        readonly property real span: Math.max(1, win.weekMax - win.weekMin)
-                                        x: parent.width * (modelData.min - win.weekMin) / span
-                                        width: Math.max(6, parent.width * (modelData.max - modelData.min) / span)
-                                        height: parent.height; radius: 3
-                                        gradient: Gradient { orientation: Gradient.Horizontal; GradientStop { position: 0; color: Theme.secondary } GradientStop { position: 1; color: Theme.primary } }
-                                    }
-                                }
-                                Text { Layout.preferredWidth: 26; text: modelData.max + "°"; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12 }
-                            }
-                        }
-                    }
-                }
-
-                // ── System ──
-                Card {
-                    GridLayout {
-                        Layout.fillWidth: true
-                        columns: 2
-                        rowSpacing: 12; columnSpacing: 12
-                        Meter { title: "󰻠 CPU"; value: Math.round(win.cpu * 100) + " %"; sub: Math.round(win.temp) + " °C"; hist: win.cpuHist; max: 1; warn: win.cpu > 0.85 || win.temp > 85 }
-                        Meter { title: "󰍛 RAM"; value: win.bytes(win.memUsed * 1024); sub: "von " + win.bytes(win.memTotal * 1024); hist: win.memHist; max: 1; warn: win.memUsed / win.memTotal > 0.9 }
-                        Meter {
-                            title: "󰛳 Netz"; value: "↓ " + win.rate(win.rxRate); sub: "↑ " + win.rate(win.txRate)
-                            hist: win.netHist; max: Math.max(64 * 1024, ...win.netHist)
-                        }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignTop
-                            spacing: 4
-                            readonly property real used: win.slow.disk.used / Math.max(1, win.slow.disk.size)
-                            Small { text: "󰋊 Speicher"; color: Theme.fgMuted }
-                            Text { text: win.bytes(win.slow.disk.used); color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 15; font.bold: true }
-                            Small { text: "von " + win.bytes(win.slow.disk.size) + " · " + Math.round(parent.used * 100) + " %" }
-                            Rectangle {
-                                Layout.fillWidth: true; Layout.topMargin: 6; implicitHeight: 8; radius: 4; color: Theme.surfaceContainerHighest
-                                Rectangle { width: parent.width * parent.parent.used; height: parent.height; radius: 4; color: parent.parent.used > 0.9 ? Theme.error : Theme.primary }
-                            }
-                        }
-                    }
-                    Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.outlineVariant }
-                    Small { text: "Meiste Last gerade"; color: Theme.fgMuted }
-                    Repeater {
-                        model: win.slow.procs
-                        delegate: RowLayout {
-                            required property var modelData
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Text { Layout.fillWidth: true; text: modelData.name; color: Theme.fg; font.family: Theme.fontMono; font.pixelSize: 12; elide: Text.ElideRight }
-                            Small { text: win.bytes(modelData.mem * 1048576) }
-                            Item {
-                                Layout.preferredWidth: 70; implicitHeight: 6
-                                Rectangle { anchors.fill: parent; radius: 3; color: Theme.surfaceContainerHighest }
-                                Rectangle { width: parent.width * Math.min(1, modelData.cpu / 100 / win.cores); height: parent.height; radius: 3; color: Theme.primary }
-                            }
-                            Text { Layout.preferredWidth: 44; horizontalAlignment: Text.AlignRight; text: (modelData.cpu / win.cores).toFixed(1) + "%"; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11 }
-                        }
-                    }
-                }
-
-                // ── Akkus ──
-                Card {
-                    Small { text: "Akkus"; color: Theme.fgMuted }
-                    Repeater {
-                        model: win.slow.bats
-                        delegate: ColumnLayout {
-                            id: bat
-                            required property var modelData
-                            readonly property real health: modelData.full / Math.max(1, modelData.design)
-                            readonly property bool charging: modelData.status === "Charging"
-                            readonly property real hours: modelData.power > 0 ? (charging ? (modelData.full - modelData.now) : modelData.now) / modelData.power : 0
-                            Layout.fillWidth: true
-                            spacing: 4
-                            RowLayout {
-                                Layout.fillWidth: true
-                                Text { text: (bat.charging ? "󰂄 " : "󰁹 ") + (bat.modelData.name === "BAT0" ? "Intern" : "Wechselakku"); color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: true }
-                                Item { Layout.fillWidth: true }
-                                Small {
-                                    text: bat.hours > 0 ? `${bat.charging ? "voll in" : "noch"} ${Math.floor(bat.hours)} h ${Math.round(bat.hours % 1 * 60)} min`
-                                        : bat.modelData.status === "Not charging" ? "wartet" : bat.modelData.status === "Full" ? "voll" : bat.charging ? "lädt" : ""
-                                }
-                                Text { text: bat.modelData.cap + " %"; color: bat.modelData.cap <= 15 ? Theme.error : Theme.primary; font.family: Theme.fontUi; font.pixelSize: 13; font.bold: true }
-                            }
-                            Rectangle {
-                                Layout.fillWidth: true; implicitHeight: 8; radius: 4; color: Theme.surfaceContainerHighest
-                                Rectangle { width: parent.width * bat.modelData.cap / 100; height: parent.height; radius: 4; color: bat.modelData.cap <= 15 ? Theme.error : Theme.primary }
-                                Rectangle {   // Ladegrenze
-                                    visible: bat.modelData.end > 0 && bat.modelData.end < 100
-                                    x: parent.width * bat.modelData.end / 100 - 1; width: 2; height: parent.height + 4; y: -2; color: Theme.tertiary
-                                }
-                            }
-                            Small { text: `Gesundheit ${Math.round(bat.health * 100)} %  ·  ${bat.modelData.cycles} Ladezyklen  ·  lädt bis ${bat.modelData.end || 100} %` }
-                        }
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.topMargin: 4
                         spacing: 6
-                        readonly property bool gentle: win.slow.bats.length > 0 && win.slow.bats.every(b => b.end > 0 && b.end <= 80)
-                        Button2 { text: "󰂃  Schonen (80 %)"; on: parent.gentle; onClicked: Quickshell.execDetached(["alacritty", "--class", "floating-term", "-e", "bash", "-c", "akku schonen; akku status; read -p 'Enter zum Schließen'"]) }
-                        Button2 { text: "󰁹  Voll laden"; on: !parent.gentle; onClicked: Quickshell.execDetached(["alacritty", "--class", "floating-term", "-e", "bash", "-c", "akku voll; akku status; read -p 'Enter zum Schließen'"]) }
+                        Layout.alignment: Qt.AlignTop | Qt.AlignRight
+                        IconButton {
+                            Layout.alignment: Qt.AlignRight
+                            icon: win.editing ? "󰄬" : "󰏫"
+                            label: win.editing ? "Fertig" : ""
+                            on: win.editing
+                            tip: "Widgets anpassen"
+                            onClicked: win.editing = !win.editing
+                        }
+                        Small { Layout.alignment: Qt.AlignRight; text: "󰔟 " + Math.floor(win.uptime / 3600) + " h " + Math.floor(win.uptime % 3600 / 60) + " min" }
+                    }
+                }
+
+                // ── Widgets ──
+                Repeater {
+                    model: Config.widgets
+                    delegate: ColumnLayout {
+                        id: slot
+                        required property string modelData
+                        required property int index
+                        readonly property var info: Config.widgetInfo[modelData] ?? { name: modelData, icon: "?" }
+                        Layout.fillWidth: true
+                        spacing: 6
+                        // Bearbeiten: kompakte Zeile statt Inhalt
+                        Rectangle {
+                            visible: win.editing
+                            Layout.fillWidth: true
+                            implicitHeight: 48; radius: 12
+                            color: Theme.surfaceContainerHigh
+                            border.width: 1; border.color: Theme.outlineVariant
+                            RowLayout {
+                                anchors { fill: parent; leftMargin: 14; rightMargin: 8 }
+                                spacing: 4
+                                Text { text: slot.info.icon; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 18 }
+                                ColumnLayout {
+                                    Layout.fillWidth: true; Layout.leftMargin: 6; spacing: 0
+                                    Text { text: slot.info.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 13; font.bold: true }
+                                    Small { text: slot.info.desc ?? ""; elide: Text.ElideRight; Layout.fillWidth: true }
+                                }
+                                IconButton { icon: "󰁝"; enabled: slot.index > 0; onClicked: win.move(slot.modelData, -1) }
+                                IconButton { icon: "󰁅"; enabled: slot.index < Config.widgets.length - 1; onClicked: win.move(slot.modelData, 1) }
+                                IconButton { icon: "󰅖"; danger: true; onClicked: Config.set("widgets", Config.widgets.filter(w => w !== slot.modelData)) }
+                            }
+                        }
+                        Loader {
+                            Layout.fillWidth: true
+                            visible: !win.editing
+                            sourceComponent: ({ weather: weatherW, news: newsW, media: mediaW, system: systemW, processes: processesW, battery: batteryW })[slot.modelData] ?? null
+                        }
+                    }
+                }
+
+                // ── Widget hinzufügen ──
+                Card {
+                    visible: win.editing
+                    Small { text: "Widget hinzufügen"; color: Theme.fgMuted }
+                    Repeater {
+                        model: Object.keys(Config.widgetInfo).filter(w => !win.has(w))
+                        delegate: Rectangle {
+                            required property string modelData
+                            readonly property var info: Config.widgetInfo[modelData]
+                            Layout.fillWidth: true
+                            implicitHeight: 44; radius: 10
+                            color: addM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer
+                            RowLayout {
+                                anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                                spacing: 10
+                                Text { text: parent.parent.info.icon; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 18 }
+                                ColumnLayout {
+                                    spacing: 0; Layout.fillWidth: true
+                                    Text { text: parent.parent.parent.info.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: true }
+                                    Small { text: parent.parent.parent.info.desc }
+                                }
+                                Text { text: "󰐕"; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 18 }
+                            }
+                            MouseArea { id: addM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Config.set("widgets", Config.widgets.concat([modelData])); if (modelData === "news") win.loadNews(false) } }
+                        }
+                    }
+                    Small { visible: Object.keys(Config.widgetInfo).every(w => win.has(w)); text: "Alle Widgets sind schon da." }
+                    Small { text: "Nachrichtenquellen und mehr: Einstellungen (SUPER+I)"; color: Theme.outline }
+                }
+            }
+        }
+    }
+
+    // ═════════════════════════ Widgets ═════════════════════════
+
+    Component {
+        id: weatherW
+        Card {
+            Small { visible: win.wx.current === undefined; text: "Wetter wird geladen …" }
+            RowLayout {
+                visible: win.wx.current !== undefined
+                Layout.fillWidth: true
+                spacing: 12
+                Text { text: win.wxIcon(win.wx.current?.weather_code ?? 3, win.wx.current?.is_day ?? 1); color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 40 }
+                ColumnLayout {
+                    spacing: 0
+                    Text { text: Math.round(win.wx.current?.temperature_2m ?? 0) + "°"; color: Theme.fg; font.family: Theme.fontAccent; font.pixelSize: 30 }
+                    Text { text: win.wxText(win.wx.current?.weather_code ?? 3); color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12 }
+                }
+                Item { Layout.fillWidth: true }
+                ColumnLayout {
+                    spacing: 1
+                    Small { Layout.alignment: Qt.AlignRight; text: "gefühlt " + Math.round(win.wx.current?.apparent_temperature ?? 0) + "°" }
+                    Small { Layout.alignment: Qt.AlignRight; text: "󰖝 " + Math.round(win.wx.current?.wind_speed_10m ?? 0) + " km/h  󰖎 " + (win.wx.current?.relative_humidity_2m ?? 0) + " %" }
+                    Small { Layout.alignment: Qt.AlignRight; text: "󰖜 " + (win.wx.daily?.sunrise?.[0]?.slice(11) ?? "") + "  󰖛 " + (win.wx.daily?.sunset?.[0]?.slice(11) ?? "") }
+                }
+            }
+            RowLayout {
+                id: hoursRow
+                Layout.fillWidth: true
+                spacing: 0
+                Repeater {
+                    model: win.hours
+                    delegate: ColumnLayout {
+                        required property var modelData
+                        Layout.preferredWidth: hoursRow.width / Math.max(1, win.hours.length)
+                        spacing: 2
+                        Small { Layout.alignment: Qt.AlignHCenter; text: modelData.t }
+                        Text { Layout.alignment: Qt.AlignHCenter; text: win.wxIcon(modelData.code, modelData.day); color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 18 }
+                        Text { Layout.alignment: Qt.AlignHCenter; text: modelData.temp + "°"; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12 }
+                        Small { Layout.alignment: Qt.AlignHCenter; text: modelData.rain >= 20 ? "󰖗" + modelData.rain + "%" : " "; color: Theme.tertiary }
+                    }
+                }
+            }
+            Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.outlineVariant; visible: win.days.length > 0 }
+            Repeater {
+                model: win.days
+                delegate: RowLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Text { Layout.preferredWidth: 78; text: modelData.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12 }
+                    Text { Layout.preferredWidth: 22; text: win.wxIcon(modelData.code, 1); color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 15 }
+                    Small { Layout.preferredWidth: 36; text: modelData.rain >= 20 ? modelData.rain + "%" : ""; color: Theme.tertiary }
+                    Small { Layout.preferredWidth: 26; horizontalAlignment: Text.AlignRight; text: modelData.min + "°" }
+                    Item {
+                        Layout.fillWidth: true; implicitHeight: 6
+                        Rectangle { anchors.fill: parent; radius: 3; color: Theme.surfaceContainerHighest }
+                        Rectangle {
+                            readonly property real span: Math.max(1, win.weekMax - win.weekMin)
+                            x: parent.width * (modelData.min - win.weekMin) / span
+                            width: Math.max(6, parent.width * (modelData.max - modelData.min) / span)
+                            height: parent.height; radius: 3
+                            gradient: Gradient { orientation: Gradient.Horizontal; GradientStop { position: 0; color: Theme.secondary } GradientStop { position: 1; color: Theme.primary } }
+                        }
+                    }
+                    Text { Layout.preferredWidth: 26; text: modelData.max + "°"; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12 }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: newsW
+        Card {
+            RowLayout {
+                Layout.fillWidth: true
+                Small { text: "󰎕  Nachrichten"; color: Theme.fgMuted; Layout.fillWidth: true }
+                Text {
+                    text: "󰑓"; color: refreshM.containsMouse ? Theme.primary : Theme.fgMuted
+                    font.family: Theme.fontUi; font.pixelSize: 14
+                    RotationAnimation on rotation { running: win.newsLoading; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
+                    MouseArea { id: refreshM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.loadNews(true) }
+                }
+            }
+            Small { visible: Config.feeds.length === 0; text: "Keine Quellen – in den Einstellungen (SUPER+I → Nachrichten) hinzufügen." }
+            Small { visible: Config.feeds.length > 0 && win.news.length === 0; text: win.newsLoading ? "Lade Schlagzeilen …" : "Keine Schlagzeilen" }
+            Repeater {
+                model: win.shownNews
+                delegate: Rectangle {
+                    id: item
+                    required property var modelData
+                    Layout.fillWidth: true
+                    implicitHeight: itemCol.implicitHeight + 16
+                    radius: 10
+                    color: itemM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                    MouseArea {
+                        id: itemM
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: item.modelData.link ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: if (item.modelData.link) { Qt.openUrlExternally(item.modelData.link); win.open = false }
+                    }
+                    ColumnLayout {
+                        id: itemCol
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8; leftMargin: 10; rightMargin: 26 }
+                        spacing: 3
+                        RowLayout {
+                            spacing: 6
+                            Rectangle {
+                                implicitWidth: srcTxt.implicitWidth + 10; implicitHeight: 16; radius: 5
+                                color: Qt.alpha(win.sourceColor(item.modelData.source), 0.2)
+                                Text { id: srcTxt; anchors.centerIn: parent; text: item.modelData.source; color: win.sourceColor(item.modelData.source); font.family: Theme.fontUi; font.pixelSize: 10; font.bold: true }
+                            }
+                            Small { text: win.ago(item.modelData.time) }
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            text: item.modelData.title
+                            color: item.modelData.error ? Theme.error : Theme.fg
+                            font.family: Theme.fontUi; font.pixelSize: 12
+                            wrapMode: Text.WordWrap; maximumLineCount: 3; elide: Text.ElideRight
+                        }
+                    }
+                    Text {   // Schlagzeile ausblenden
+                        visible: itemM.containsMouse || xM.containsMouse
+                        anchors { right: parent.right; top: parent.top; margins: 6 }
+                        text: "󰅖"; color: xM.containsMouse ? Theme.error : Theme.fgMuted
+                        font.family: Theme.fontUi; font.pixelSize: 14
+                        MouseArea { id: xM; anchors.fill: parent; anchors.margins: -4; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.hideNews(item.modelData.link) }
+                    }
+                }
+            }
+            Text {
+                visible: win.news.length > Config.newsCount
+                Layout.alignment: Qt.AlignHCenter
+                text: win.newsMore ? "weniger anzeigen" : "mehr anzeigen"
+                color: moreM.containsMouse ? Theme.primary : Theme.fgMuted
+                font.family: Theme.fontUi; font.pixelSize: 11
+                MouseArea { id: moreM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.newsMore = !win.newsMore }
+            }
+        }
+    }
+
+    Component {
+        id: mediaW
+        Card {
+            readonly property var player: Mpris.players.values.find(p => p.isPlaying) ?? Mpris.players.values[0] ?? null
+            Small { visible: parent.player === null; text: "󰝚  Nichts wird abgespielt" }
+            RowLayout {
+                visible: parent.player !== null
+                Layout.fillWidth: true
+                spacing: 10
+                Rectangle {
+                    Layout.preferredWidth: 56; Layout.preferredHeight: 56; radius: 10; clip: true
+                    color: Theme.surfaceContainerHighest
+                    Image { anchors.fill: parent; source: parent.parent.parent.player?.trackArtUrl ?? ""; fillMode: Image.PreserveAspectCrop; asynchronous: true }
+                }
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 1
+                    Text { Layout.fillWidth: true; text: parent.parent.parent.player?.trackTitle || "Unbekannt"; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 13; font.bold: true; elide: Text.ElideRight }
+                    Small { Layout.fillWidth: true; text: parent.parent.parent.player?.trackArtist ?? ""; elide: Text.ElideRight }
+                }
+                IconButton { icon: "󰒮"; onClicked: parent.parent.player?.previous() }
+                IconButton { icon: parent.parent.player?.isPlaying ? "󰏤" : "󰐊"; on: true; onClicked: parent.parent.player?.togglePlaying() }
+                IconButton { icon: "󰒭"; onClicked: parent.parent.player?.next() }
+            }
+        }
+    }
+
+    Component {
+        id: systemW
+        Card {
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 2
+                rowSpacing: 12; columnSpacing: 12
+                Meter { title: "󰻠 CPU"; value: Math.round(win.cpu * 100) + " %"; sub: Math.round(win.temp) + " °C"; hist: win.cpuHist; max: 1; warn: win.cpu > 0.85 || win.temp > 85 }
+                Meter { title: "󰍛 RAM"; value: win.bytes(win.memUsed * 1024); sub: "von " + win.bytes(win.memTotal * 1024); hist: win.memHist; max: 1; warn: win.memUsed / win.memTotal > 0.9 }
+                Meter { title: "󰛳 Netz"; value: "↓ " + win.rate(win.rxRate); sub: "↑ " + win.rate(win.txRate); hist: win.netHist; max: Math.max(64 * 1024, ...win.netHist) }
+                ColumnLayout {
+                    id: disk
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignTop
+                    spacing: 4
+                    readonly property real used: win.slow.disk.used / Math.max(1, win.slow.disk.size)
+                    Small { text: "󰋊 Speicher"; color: Theme.fgMuted }
+                    Text { text: win.bytes(win.slow.disk.used); color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 15; font.bold: true }
+                    Small { text: "von " + win.bytes(win.slow.disk.size) + " · " + Math.round(disk.used * 100) + " %" }
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.topMargin: 6; implicitHeight: 8; radius: 4; color: Theme.surfaceContainerHighest
+                        Rectangle { width: parent.width * disk.used; height: parent.height; radius: 4; color: disk.used > 0.9 ? Theme.error : Theme.primary }
                     }
                 }
             }
         }
     }
 
-    // ── Bausteine ────────────────────────────────────────────────────────────
+    Component {
+        id: processesW
+        Card {
+            Small { text: "󰓅  Meiste Last gerade"; color: Theme.fgMuted }
+            Repeater {
+                model: win.slow.procs
+                delegate: RowLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Text { Layout.fillWidth: true; text: modelData.name; color: Theme.fg; font.family: Theme.fontMono; font.pixelSize: 12; elide: Text.ElideRight }
+                    Small { text: win.bytes(modelData.mem * 1048576) }
+                    Item {
+                        Layout.preferredWidth: 70; implicitHeight: 6
+                        Rectangle { anchors.fill: parent; radius: 3; color: Theme.surfaceContainerHighest }
+                        Rectangle { width: parent.width * Math.min(1, modelData.cpu / 100 / win.cores); height: parent.height; radius: 3; color: Theme.primary }
+                    }
+                    Text { Layout.preferredWidth: 44; horizontalAlignment: Text.AlignRight; text: (modelData.cpu / win.cores).toFixed(1) + "%"; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11 }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: batteryW
+        Card {
+            id: batCard
+            readonly property bool gentle: win.slow.bats.length > 0 && win.slow.bats.every(b => b.end > 0 && b.end <= 80)
+            Small { text: "󰁹  Akkus"; color: Theme.fgMuted }
+            Repeater {
+                model: win.slow.bats
+                delegate: ColumnLayout {
+                    id: bat
+                    required property var modelData
+                    readonly property real health: modelData.full / Math.max(1, modelData.design)
+                    readonly property bool charging: modelData.status === "Charging"
+                    readonly property real hours: modelData.power > 0 ? (charging ? (modelData.full - modelData.now) : modelData.now) / modelData.power : 0
+                    Layout.fillWidth: true
+                    spacing: 4
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: (bat.charging ? "󰂄 " : "󰁹 ") + (bat.modelData.name === "BAT0" ? "Intern" : "Wechselakku"); color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: true }
+                        Item { Layout.fillWidth: true }
+                        Small {
+                            text: bat.hours > 0 ? `${bat.charging ? "voll in" : "noch"} ${Math.floor(bat.hours)} h ${Math.round(bat.hours % 1 * 60)} min`
+                                : bat.modelData.status === "Not charging" ? "wartet" : bat.modelData.status === "Full" ? "voll" : bat.charging ? "lädt" : ""
+                        }
+                        Text { text: bat.modelData.cap + " %"; color: bat.modelData.cap <= 15 ? Theme.error : Theme.primary; font.family: Theme.fontUi; font.pixelSize: 13; font.bold: true }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true; implicitHeight: 8; radius: 4; color: Theme.surfaceContainerHighest
+                        Rectangle { width: parent.width * bat.modelData.cap / 100; height: parent.height; radius: 4; color: bat.modelData.cap <= 15 ? Theme.error : Theme.primary }
+                        Rectangle {
+                            visible: bat.modelData.end > 0 && bat.modelData.end < 100
+                            x: parent.width * bat.modelData.end / 100 - 1; width: 2; height: parent.height + 4; y: -2; color: Theme.tertiary
+                        }
+                    }
+                    Small { text: `Gesundheit ${Math.round(bat.health * 100)} %  ·  ${bat.modelData.cycles} Ladezyklen  ·  lädt bis ${bat.modelData.end || 100} %` }
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: 4
+                spacing: 6
+                Button2 { text: "󰂃  Schonen (80 %)"; on: batCard.gentle; onClicked: Quickshell.execDetached(["alacritty", "--class", "floating-term", "-e", "bash", "-c", "akku schonen; akku status; read -p 'Enter zum Schließen'"]) }
+                Button2 { text: "󰁹  Voll laden"; on: !batCard.gentle; onClicked: Quickshell.execDetached(["alacritty", "--class", "floating-term", "-e", "bash", "-c", "akku voll; akku status; read -p 'Enter zum Schließen'"]) }
+            }
+        }
+    }
+
+    // ═════════════════════════ Bausteine ═════════════════════════
     component Small: Text { color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11 }
 
     component Card: Rectangle {
@@ -351,6 +582,28 @@ PanelWindow {
         radius: 14
         color: Theme.surfaceContainerHigh
         ColumnLayout { id: inner; anchors { left: parent.left; right: parent.right; top: parent.top; margins: 12 } spacing: 8 }
+    }
+
+    component IconButton: Rectangle {
+        id: ib
+        property string icon
+        property string label: ""
+        property string tip: ""
+        property bool on: false
+        property bool danger: false
+        property bool enabled: true
+        signal clicked()
+        implicitWidth: Math.max(28, ibRow.implicitWidth + 14); implicitHeight: 28; radius: 9
+        opacity: enabled ? 1 : 0.35
+        color: on ? Theme.primary : (ibM.containsMouse ? (danger ? Qt.alpha(Theme.error, 0.2) : Theme.surfaceContainerHighest) : "transparent")
+        Row {
+            id: ibRow
+            anchors.centerIn: parent
+            spacing: 6
+            Text { text: ib.icon; color: ib.on ? Theme.fgOnPrimary : ib.danger && ibM.containsMouse ? Theme.error : Theme.fg; font.family: Theme.fontUi; font.pixelSize: 15 }
+            Text { visible: ib.label !== ""; text: ib.label; color: ib.on ? Theme.fgOnPrimary : Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+        }
+        MouseArea { id: ibM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (ib.enabled) ib.clicked() }
     }
 
     component Button2: Rectangle {
@@ -366,7 +619,6 @@ PanelWindow {
         MouseArea { id: b2m; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: b2.clicked() }
     }
 
-    // Kennzahl mit Verlaufskurve
     component Meter: ColumnLayout {
         id: m
         property string title
@@ -381,7 +633,6 @@ PanelWindow {
         Text { text: m.value; color: m.warn ? Theme.error : Theme.fg; font.family: Theme.fontUi; font.pixelSize: 15; font.bold: true }
         Small { text: m.sub }
         Canvas {
-            id: cv
             Layout.fillWidth: true
             implicitHeight: 34
             property var h: m.hist

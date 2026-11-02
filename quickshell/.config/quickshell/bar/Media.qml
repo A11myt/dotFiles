@@ -8,7 +8,7 @@ Pill {
     id: p
     readonly property var player: Mpris.players.values.find(pl => pl.isPlaying) ?? Mpris.players.values[0] ?? null
     readonly property string info: player ? [player.trackArtist, player.trackTitle].filter(Boolean).join(" - ") : ""
-    visible: info !== ""
+    want: info !== ""
     // Klick: Medien-Popup · Mittelklick: Wiedergabe/Pause · Scrollen: nächster/vorheriger Titel
     onClicked: e => e.button === Qt.MiddleButton ? player?.togglePlaying() : Panels.toggle("media")
     onScrolled: e => e.angleDelta.y > 0 ? player?.previous() : player?.next()

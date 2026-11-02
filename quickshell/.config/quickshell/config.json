@@ -1,0 +1,26 @@
+{
+    "bar": {},
+    "feeds": [
+        {
+            "name": "tagesschau",
+            "url": "https://www.tagesschau.de/index~rss2.xml"
+        },
+        {
+            "name": "heise",
+            "url": "https://www.heise.de/rss/heise-top-atom.xml"
+        }
+    ],
+    "newsCount": 6,
+    "newsHidden": [
+        "https://www.tagesschau.de/inland/merz-nachfolge-steinmeier-100.html",
+        "https://www.tagesschau.de/ausland/amerika/trump-stores-fanshop-100.html",
+        "https://www.tagesschau.de/inland/innenpolitik/spd-rot-gruen-rot-linke-berlin-100.html"
+    ],
+    "widgets": [
+        "weather",
+        "news",
+        "system",
+        "processes",
+        "battery"
+    ]
+}

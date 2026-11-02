@@ -10,7 +10,7 @@ Pill {
     readonly property real pct: dev?.percentage ?? 0
     readonly property bool charging: !UPower.onBattery
     readonly property bool critical: pct < 0.2 && !charging
-    visible: dev?.isPresent ?? false
+    want: dev?.isPresent ?? false
     color: critical ? Qt.alpha(Theme.error, 0.25) : (hovered ? hoverColor : Qt.alpha(Theme.surfaceVariant, 0.05))
     onClicked: Quickshell.execDetached(["alacritty", "-e", "sh", "-c", "akku; echo; upower -i $(upower -e | grep -m1 BAT) | less"])
     BarText {

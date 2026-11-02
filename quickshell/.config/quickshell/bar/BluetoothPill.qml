@@ -10,7 +10,7 @@ Pill {
     id: p
     readonly property var devs: (Bluetooth.devices?.values ?? []).filter(d => d.connected)
     readonly property var dev: devs.find(d => d.batteryAvailable) ?? devs[0] ?? null
-    visible: dev !== null
+    want: dev !== null
     onClicked: Panels.showPage("bluetooth")
     function icon(d) {
         const i = d?.icon ?? ""

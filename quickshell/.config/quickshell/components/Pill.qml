@@ -1,5 +1,6 @@
 import QtQuick
 import qs
+import qs.services
 import QtQuick.Effects
 
 // Abgerundete „Pille“ wie in der AGS-Leiste: leichter Hintergrund, Schatten, Hover.
@@ -13,6 +14,10 @@ Item {
     property int padX: 14
     property color hoverColor: Qt.alpha(Theme.surfaceVariant, 0.12)
     property color color: hovered ? hoverColor : Qt.alpha(Theme.surfaceVariant, 0.05)
+    // Sichtbarkeit: eigene Bedingung des Elements (want) UND Einstellung der Leiste (barKey)
+    property bool want: true
+    property string barKey: ""
+    visible: want && (barKey === "" || Config.barOn(barKey))
     signal clicked(var event)
     signal scrolled(var event)
 

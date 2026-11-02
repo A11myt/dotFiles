@@ -2,8 +2,10 @@ import QtQuick
 import Quickshell
 import Quickshell.Wayland
 import qs
+import qs.services
 
-// Leiste pro Monitor: links Launcher/Uhr/Wetter/Arbeitsflächen, Mitte Glocke/Medien, rechts Status
+// Leiste pro Monitor: links Launcher/Uhr/Wetter/Arbeitsflächen, Mitte Glocke/Medien, rechts Status.
+// Ausblendbare Elemente: Einstellungen → Leiste (Config.bar)
 PanelWindow {
     id: bar
     required property var modelData
@@ -21,25 +23,25 @@ PanelWindow {
         spacing: 12
         Launcher {}
         Clock {}
-        Weather {}
+        Weather { barKey: "weather" }
         Workspaces {}
     }
     Row {
         anchors.centerIn: parent
         spacing: 12
         Bell {}
-        Media {}
+        Media { barKey: "media" }
     }
     Row {
         anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
         spacing: 12
-        Updates {}
-        Privacy {}
-        Volume {}
-        BluetoothPill {}
-        Battery {}
-        Network {}
-        PowerProfile {}
+        Updates { barKey: "updates" }
+        Privacy { barKey: "privacy" }
+        Volume { barKey: "volume" }
+        BluetoothPill { barKey: "bluetooth" }
+        Battery { barKey: "battery" }
+        Network { barKey: "network" }
+        PowerProfile { barKey: "powerProfile" }
         QuickToggle {}
     }
 }

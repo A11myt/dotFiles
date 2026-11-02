@@ -6,6 +6,7 @@ import Quickshell.Wayland
 import Quickshell.Widgets
 import qs
 import qs.components
+import qs.services
 
 // Einstellungen (SUPER+I): Farben (wallthemes/Matugen) und Schrift (fontgen).
 // Jede Änderung ruft das jeweilige Werkzeug auf, das die Config-Datei ändert und
@@ -136,7 +137,9 @@ PanelWindow {
                         Layout.bottomMargin: 12; Layout.leftMargin: 6; Layout.topMargin: 4
                     }
                     Repeater {
-                        model: [{ id: "colors", icon: "󰏘", t: "Farben" }, { id: "fonts", icon: "󰛖", t: "Schrift" }]
+                        model: [{ id: "colors", icon: "󰏘", t: "Farben" }, { id: "fonts", icon: "󰛖", t: "Schrift" },
+                                { id: "dashboard", icon: "󰕮", t: "Dashboard" }, { id: "news", icon: "󰎕", t: "Nachrichten" },
+                                { id: "bar", icon: "󰍜", t: "Leiste" }]
                         delegate: Rectangle {
                             required property var modelData
                             readonly property bool on: win.page === modelData.id
@@ -333,6 +336,127 @@ PanelWindow {
                         }
                     }
 
+                    // ═════════════ Dashboard ═════════════
+                    ColumnLayout {
+                        visible: win.page === "dashboard"
+                        Layout.fillWidth: true
+                        spacing: 22
+                        Section { title: "Widgets"; sub: "Info-Leiste rechts (SUPER+B). Reihenfolge änderst du dort über den Stift." }
+                        ColumnLayout { Layout.fillWidth: true; spacing: 8; Repeater {
+                            model: Object.keys(Config.widgetInfo)
+                            delegate: SwitchRow {
+                                required property string modelData
+                                readonly property var info: Config.widgetInfo[modelData]
+                                icon: info.icon; title: info.name; sub: info.desc
+                                checked: Config.widgets.indexOf(modelData) >= 0
+                                onToggled: on => Config.set("widgets", on ? Config.widgets.concat([modelData]) : Config.widgets.filter(w => w !== modelData))
+                            }
+                        } }
+                    }
+
+                    // ═════════════ Nachrichten ═════════════
+                    ColumnLayout {
+                        visible: win.page === "news"
+                        Layout.fillWidth: true
+                        spacing: 22
+                        Section { title: "Quellen"; sub: "RSS- oder Atom-Feeds. Neue Schlagzeilen werden alle 15 Minuten geholt." }
+                        ColumnLayout { Layout.fillWidth: true; spacing: 8; Repeater {
+                            model: Config.feeds
+                            delegate: Rectangle {
+                                id: feed
+                                required property var modelData
+                                required property int index
+                                Layout.fillWidth: true
+                                implicitHeight: 50; radius: 12
+                                color: Theme.surfaceContainerHigh
+                                RowLayout {
+                                    anchors { fill: parent; leftMargin: 14; rightMargin: 8 }
+                                    spacing: 10
+                                    Text { text: "󰑫"; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 18 }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 0
+                                        Text { text: feed.modelData.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx; font.bold: true }
+                                        Text { Layout.fillWidth: true; text: feed.modelData.url; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; elide: Text.ElideMiddle }
+                                    }
+                                    Chip { text: "󰅖"; onClicked: Config.set("feeds", Config.feeds.filter((_, i) => i !== feed.index)) }
+                                }
+                            }
+                        } }
+                        // neue Quelle
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Field { id: feedName; Layout.preferredWidth: 150; placeholder: "Name" }
+                            Field { id: feedUrl; Layout.fillWidth: true; placeholder: "https://…/feed.xml"; onAccepted: addFeed.clicked() }
+                            Chip {
+                                id: addFeed
+                                text: "󰐕  Hinzufügen"
+                                selected: true
+                                onClicked: {
+                                    const url = feedUrl.text.trim()
+                                    if (!/^https?:\/\//.test(url)) return
+                                    const name = feedName.text.trim() || url.replace(/^https?:\/\/(www\.)?/, "").split(/[\/.]/)[0]
+                                    Config.set("feeds", Config.feeds.concat([{ name, url }]))
+                                    feedName.text = ""; feedUrl.text = ""
+                                }
+                            }
+                        }
+                        Section { title: "Vorschläge"; sub: "Antippen zum Hinzufügen" }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Repeater {
+                                model: [
+                                    { name: "tagesschau", url: "https://www.tagesschau.de/index~rss2.xml" },
+                                    { name: "heise", url: "https://www.heise.de/rss/heise-top-atom.xml" },
+                                    { name: "Spiegel", url: "https://www.spiegel.de/schlagzeilen/index.rss" },
+                                    { name: "Zeit", url: "https://newsfeed.zeit.de/index" },
+                                    { name: "golem", url: "https://rss.golem.de/rss.php?feed=ATOM1.0" },
+                                    { name: "t3n", url: "https://t3n.de/rss.xml" },
+                                    { name: "Arch Linux", url: "https://archlinux.org/feeds/news/" },
+                                    { name: "Hacker News", url: "https://hnrss.org/frontpage" },
+                                    { name: "kicker", url: "https://newsfeed.kicker.de/news/aktuell" }
+                                ].filter(f => !Config.feeds.some(x => x.url === f.url))
+                                delegate: Chip {
+                                    required property var modelData
+                                    text: "󰐕  " + modelData.name
+                                    onClicked: Config.set("feeds", Config.feeds.concat([modelData]))
+                                }
+                            }
+                        }
+                        Section { title: "Anzahl"; sub: "Schlagzeilen im Dashboard (mit „mehr anzeigen“ dreimal so viele)" }
+                        RowLayout {
+                            spacing: 8
+                            Repeater {
+                                model: [3, 5, 6, 8, 10]
+                                delegate: Chip { required property int modelData; text: String(modelData); selected: Config.newsCount === modelData; onClicked: Config.set("newsCount", modelData) }
+                            }
+                        }
+                        RowLayout {
+                            visible: Config.newsHidden.length > 0
+                            spacing: 10
+                            Text { text: Config.newsHidden.length + " Schlagzeilen ausgeblendet"; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12 }
+                            Chip { text: "Wieder anzeigen"; onClicked: Config.set("newsHidden", []) }
+                        }
+                    }
+
+                    // ═════════════ Leiste ═════════════
+                    ColumnLayout {
+                        visible: win.page === "bar"
+                        Layout.fillWidth: true
+                        spacing: 22
+                        Section { title: "Elemente der Leiste"; sub: "Ausgeblendetes bleibt über Quick Settings und Dashboard erreichbar" }
+                        ColumnLayout { Layout.fillWidth: true; spacing: 8; Repeater {
+                            model: Object.keys(Config.barInfo)
+                            delegate: SwitchRow {
+                                required property string modelData
+                                title: Config.barInfo[modelData]
+                                checked: Config.barOn(modelData)
+                                onToggled: on => Config.setBar(modelData, on)
+                            }
+                        } }
+                    }
+
                     // ═════════════ Schrift ═════════════
                     ColumnLayout {
                         visible: win.page === "fonts"
@@ -414,6 +538,51 @@ PanelWindow {
         spacing: 2
         Text { text: parent.title; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx + 3; font.bold: true }
         Text { visible: text !== ""; text: parent.sub; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; Layout.fillWidth: true; wrapMode: Text.WordWrap }
+    }
+
+    component SwitchRow: Rectangle {
+        id: sr
+        property string icon: ""
+        property string title
+        property string sub: ""
+        property bool checked
+        signal toggled(bool on)
+        Layout.fillWidth: true
+        implicitHeight: sub ? 52 : 44; radius: 12
+        color: srM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh
+        MouseArea { id: srM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: sr.toggled(!sr.checked) }
+        RowLayout {
+            anchors { left: parent.left; right: toggle.left; verticalCenter: parent.verticalCenter; leftMargin: 14; rightMargin: 12 }
+            spacing: 12
+            Text { visible: sr.icon !== ""; text: sr.icon; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 18 }
+            ColumnLayout {
+                Layout.fillWidth: true; spacing: 0
+                Text { Layout.fillWidth: true; text: sr.title; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx }
+                Text { Layout.fillWidth: true; visible: sr.sub !== ""; text: sr.sub; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11 }
+            }
+        }
+        // fest am rechten Rand, damit alle Schalter bündig stehen
+        Toggle { id: toggle; anchors { right: parent.right; rightMargin: 14; verticalCenter: parent.verticalCenter } checked: sr.checked; onToggled: on => sr.toggled(on) }
+    }
+
+    component Field: Rectangle {
+        id: fld
+        property alias text: inp.text
+        property string placeholder
+        signal accepted()
+        implicitHeight: 36; radius: 10
+        color: Theme.surfaceContainerHigh
+        border.width: 1; border.color: inp.activeFocus ? Theme.primary : Theme.outlineVariant
+        TextInput {
+            id: inp
+            anchors { fill: parent; leftMargin: 10; rightMargin: 10 }
+            verticalAlignment: TextInput.AlignVCenter
+            clip: true
+            color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12
+            onAccepted: fld.accepted()
+            Text { visible: !inp.text; anchors.verticalCenter: parent.verticalCenter; text: fld.placeholder; color: Theme.fgMuted; font: inp.font }
+        }
+        MouseArea { anchors.fill: parent; cursorShape: Qt.IBeamCursor; onClicked: inp.forceActiveFocus(); propagateComposedEvents: true }
     }
 
     component Chip: Rectangle {
