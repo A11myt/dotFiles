@@ -42,6 +42,8 @@ if [[ " $* " == *" --system "* ]]; then
     sudo install -Dm644 system/pacman/pacman.conf          /etc/pacman.conf
     sudo install -Dm644 system/reflector/reflector.conf    /etc/xdg/reflector/reflector.conf
     sudo systemctl enable reflector.timer paccache.timer
+    sudo install -Dm644 system/tmpfiles/battery-thresholds.conf /etc/tmpfiles.d/battery-thresholds.conf
+    sudo systemd-tmpfiles --create /etc/tmpfiles.d/battery-thresholds.conf   # Akku: 75–80 %
     sudo install -d -o "$USER" -g greeter -m 755 /var/lib/greeter-theme
     echo "   ⚠ timeshift.json enthält die UUID der alten Root-Partition → in Timeshift neu wählen"
     sudo systemctl enable greetd.service

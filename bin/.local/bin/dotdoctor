@@ -288,6 +288,16 @@ def check_system(updates: bool) -> None:
                else "ACPI-Interrupt-Sturm (kostet dauerhaft CPU) → acpi_mask_gpe=0x.. als Kernel-Parameter",
                "\n".join(busy))
 
+    # Akku-Ladegrenzen (ThinkPad): 100 % Dauerladung altert den Akku am stärksten
+    bats = sorted(Path("/sys/class/power_supply").glob("BAT*"))
+    if bats:
+        ends = {b.name: (b / "charge_control_end_threshold").read_text().strip()
+                for b in bats if (b / "charge_control_end_threshold").exists()}
+        full = [n for n, e in ends.items() if e == "100"]
+        report("warn" if full else "ok",
+               "Akku-Ladegrenzen gesetzt (" + ", ".join(f"{n} bis {e} %" for n, e in ends.items()) + ")" if not full
+               else f"Akku lädt bis 100 % ({', '.join(full)}) – Ladegrenze nicht aktiv (akku schonen)")
+
     rc, out = sh("systemctl --failed --no-legend --plain; systemctl --user --failed --no-legend --plain")
     report("warn" if out else "ok", "keine fehlgeschlagenen Dienste" if not out else "fehlgeschlagene Dienste", out)
 

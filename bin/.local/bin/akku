@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Akku-Ladegrenzen (ThinkPad): akku [status|voll|schonen]
+#   voll     einmalig bis 100 % laden (z. B. vor einer Reise) – gilt bis zum nächsten Boot
+#   schonen  zurück auf 75–80 % (wie /etc/tmpfiles.d/battery-thresholds.conf)
+set -euo pipefail
+set_all() {   # $1 = Start, $2 = Ende; Ende zuerst anheben bzw. Start zuerst senken, damit Start < Ende bleibt
+    for b in /sys/class/power_supply/BAT*; do
+        [[ -w $b/charge_control_end_threshold ]] || SUDO=sudo
+        ${SUDO:-} sh -c "echo $1 > $b/charge_control_start_threshold 2>/dev/null; echo $2 > $b/charge_control_end_threshold; echo $1 > $b/charge_control_start_threshold"
+    done
+}
+case "${1:-status}" in
+    voll)    set_all 95 100 ;;
+    schonen) set_all 75 80 ;;
+    status)  ;;
+    *) echo "akku [status|voll|schonen]" >&2; exit 1 ;;
+esac
+for b in /sys/class/power_supply/BAT*; do
+    printf "%s  %3s%%  %-12s Laden %s–%s %%   Gesundheit %s%%  Zyklen %s\n" "$(basename "$b")" "$(cat "$b/capacity")" "$(cat "$b/status")" \
+        "$(cat "$b/charge_control_start_threshold")" "$(cat "$b/charge_control_end_threshold")" \
+        "$(( $(cat "$b/energy_full") * 100 / $(cat "$b/energy_full_design") ))" "$(cat "$b/cycle_count")"
+done
