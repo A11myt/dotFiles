@@ -29,6 +29,7 @@
         "https://www.golem.de/news/minecraft-und-mindustry-risikoscheue-ki-agenten-entwickeln-ausgepraegte-buerokratie-2611-214769.html"
     ],
     "widgets": [
+        "health",
         "weather",
         "system",
         "news",

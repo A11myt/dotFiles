@@ -20,7 +20,7 @@ PanelWindow {
     onOpenChanged: {
         if (open) {
             Panels.close(); scroller.contentY = 0; fast.restart()
-            fastProc.running = true; slowProc.running = true; weatherProc.running = true; loadNews(false)
+            fastProc.running = true; slowProc.running = true; weatherProc.running = true; loadNews(false); checkHealth(false)
             keys.forceActiveFocus()
         } else { closing.restart(); editing = false }
     }
@@ -103,6 +103,26 @@ PanelWindow {
         command: [Quickshell.shellDir + "/scripts/forecast.sh"]
         stdout: StdioCollector { onStreamFinished: { try { win.wx = JSON.parse(text) } catch (e) {} } }
     }
+
+    // ── System-Gesundheit ────────────────────────────────────────────────────
+    property var health: ({})
+    property bool healthRunning: healthProc.running
+    FileView {
+        id: healthCache
+        path: Quickshell.env("HOME") + "/.cache/quickshell/health.json"
+        printErrors: false
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: { try { win.health = JSON.parse(text()) } catch (e) {} }
+    }
+    function checkHealth(force) {
+        if (!has("health") || healthProc.running) return
+        if (!force && health.time && Date.now() / 1000 - health.time < 30 * 60) return
+        healthProc.running = true
+    }
+    Process { id: healthProc; command: ["python3", "-I", Quickshell.shellDir + "/scripts/health.py"] }
+    readonly property var problems: (health.doctor ?? []).filter(r => r.state !== "ok")
+    readonly property string healthState: problems.some(r => r.state === "fail") ? "fail" : problems.length ? "warn" : "ok"
 
     // ── Nachrichten ──────────────────────────────────────────────────────────
     property var news: []
@@ -267,7 +287,7 @@ PanelWindow {
                         Loader {
                             Layout.fillWidth: true
                             visible: !win.editing
-                            sourceComponent: ({ weather: weatherW, news: newsW, media: mediaW, system: systemW, processes: processesW, battery: batteryW })[slot.modelData] ?? null
+                            sourceComponent: ({ weather: weatherW, news: newsW, media: mediaW, system: systemW, processes: processesW, battery: batteryW, health: healthW, agenda: agendaW })[slot.modelData] ?? null
                         }
                     }
                 }
@@ -445,6 +465,111 @@ PanelWindow {
                 MouseArea { id: moreM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.newsMore = !win.newsMore }
             }
         }
+    }
+
+    Component {
+        id: healthW
+        Card {
+            id: hc
+            readonly property var ups: win.health.updates?.pkgs ?? []
+            readonly property var important: ups.filter(u => u.important)
+            readonly property color tone: win.healthState === "fail" ? Theme.error : win.healthState === "warn" ? Theme.tertiary : Theme.primary
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                Rectangle { width: 12; height: 12; radius: 6; color: hc.tone }
+                ColumnLayout {
+                    Layout.fillWidth: true; spacing: 0
+                    Text {
+                        text: !win.health.time ? "Noch nicht geprüft"
+                            : win.healthState === "ok" ? "Alles in Ordnung"
+                            : win.problems.length + (win.problems.length === 1 ? " Hinweis" : " Hinweise")
+                        color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 14; font.bold: true
+                    }
+                    Small { text: win.healthRunning ? "prüfe …" : win.health.time ? "geprüft " + win.ago(win.health.time) + " · " + (win.health.doctor?.length ?? 0) + " Prüfungen" : "" }
+                }
+                Text {
+                    text: "󰑓"; color: hRef.containsMouse ? Theme.primary : Theme.fgMuted
+                    font.family: Theme.fontUi; font.pixelSize: 14
+                    RotationAnimation on rotation { running: win.healthRunning; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
+                    MouseArea { id: hRef; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.checkHealth(true) }
+                }
+            }
+            // Hinweise aus dotdoctor
+            Repeater {
+                model: win.problems.slice(0, 5)
+                delegate: RowLayout {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 8
+                    Text { Layout.alignment: Qt.AlignTop; text: modelData.state === "fail" ? "󰅙" : "󰀦"; color: modelData.state === "fail" ? Theme.error : Theme.tertiary; font.family: Theme.fontUi; font.pixelSize: 13 }
+                    ColumnLayout {
+                        Layout.fillWidth: true; spacing: 0
+                        Text { Layout.fillWidth: true; text: modelData.msg; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; wrapMode: Text.WordWrap }
+                        Small { Layout.fillWidth: true; visible: text !== ""; text: (modelData.detail ?? []).slice(0, 2).join(" · "); elide: Text.ElideRight }
+                    }
+                }
+            }
+            Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.outlineVariant }
+            // Updates
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Text { text: hc.ups.length ? "󰚰" : "󰗠"; color: hc.ups.length ? Theme.primary : Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 15 }
+                ColumnLayout {
+                    Layout.fillWidth: true; spacing: 0
+                    Text {
+                        text: hc.ups.length ? `${hc.ups.length} Updates (${hc.ups.filter(u => !u.aur).length} Repo · ${hc.ups.filter(u => u.aur).length} AUR)` : "System ist aktuell"
+                        color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12
+                    }
+                    Small {
+                        visible: text !== ""
+                        Layout.fillWidth: true; elide: Text.ElideRight
+                        text: (hc.important.length ? "wichtig: " + hc.important.map(u => u.name).join(", ") : "")
+                            + (win.health.updates?.reboot ? (hc.important.length ? " · " : "") + "Neustart nötig (Kernel " + win.health.updates.reboot + ")" : "")
+                        color: Theme.tertiary
+                    }
+                    Small { text: win.health.lastUpgrade ? "letztes Update " + win.ago(win.health.lastUpgrade) : "" }
+                }
+            }
+            // Arch-News seit dem letzten Update: vor dem Aktualisieren lesen
+            Rectangle {
+                visible: (win.health.archNews ?? []).length > 0
+                Layout.fillWidth: true
+                implicitHeight: newsCol.implicitHeight + 16
+                radius: 10
+                color: Qt.alpha(Theme.error, 0.12)
+                border.width: 1; border.color: Qt.alpha(Theme.error, 0.4)
+                ColumnLayout {
+                    id: newsCol
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: 8 }
+                    spacing: 4
+                    Text { text: "󰀦  Arch-News seit deinem letzten Update – vorher lesen"; color: Theme.error; font.family: Theme.fontUi; font.pixelSize: 11; font.bold: true }
+                    Repeater {
+                        model: win.health.archNews ?? []
+                        delegate: Text {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            text: "• " + modelData.title
+                            color: anM.containsMouse ? Theme.primary : Theme.fg
+                            font.family: Theme.fontUi; font.pixelSize: 12; wrapMode: Text.WordWrap
+                            MouseArea { id: anM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Qt.openUrlExternally(modelData.link); win.open = false } }
+                        }
+                    }
+                }
+            }
+            RowLayout {
+                visible: hc.ups.length > 0
+                Layout.fillWidth: true
+                spacing: 6
+                Button2 { text: "󰚰  Jetzt aktualisieren"; onClicked: { win.open = false; Quickshell.execDetached(["alacritty", "-e", "bash", "-c", "yay; echo; read -p 'Fertig – Enter zum Schließen'"]) } }
+            }
+        }
+    }
+
+    Component {
+        id: agendaW
+        Card { Small { text: "󰃭  Termine – kommt gleich" } }
     }
 
     Component {

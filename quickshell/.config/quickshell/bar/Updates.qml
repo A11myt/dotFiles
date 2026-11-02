@@ -75,6 +75,9 @@ Pill {
                     root.status = "ok"
                     root.nextCheck = new Date(Date.now() + root.checkEvery)
                     root.notifyImportant(r)
+                    // für das Dashboard (System-Gesundheit) ablegen
+                    Quickshell.execDetached(["bash", "-c", 'mkdir -p ~/.cache/quickshell && printf "%s" "$1" > ~/.cache/quickshell/updates.json', "_",
+                        JSON.stringify({ time: Math.floor(Date.now() / 1000), pkgs: r, reboot: root.reboot })])
                 }
             }
         }

@@ -139,7 +139,8 @@ PanelWindow {
                     Repeater {
                         model: [{ id: "colors", icon: "󰏘", t: "Farben" }, { id: "fonts", icon: "󰛖", t: "Schrift" },
                                 { id: "dashboard", icon: "󰕮", t: "Dashboard" }, { id: "news", icon: "󰎕", t: "Nachrichten" },
-                                { id: "bar", icon: "󰍜", t: "Leiste" }]
+                                { id: "bar", icon: "󰍜", t: "Leiste" }, { id: "focus", icon: "󱎫", t: "Fokus" },
+                                { id: "calendar", icon: "󰃭", t: "Kalender" }]
                         delegate: Rectangle {
                             required property var modelData
                             readonly property bool on: win.page === modelData.id
@@ -455,6 +456,44 @@ PanelWindow {
                                 onToggled: on => Config.setBar(modelData, on)
                             }
                         } }
+                    }
+
+                    // ═════════════ Fokus ═════════════
+                    ColumnLayout {
+                        visible: win.page === "focus"
+                        Layout.fillWidth: true
+                        spacing: 22
+                        Section { title: "Fokus-Timer"; sub: "In der Leiste: Klick startet/pausiert, Rechtsklick stoppt, Mittelklick überspringt. SUPER+Shift+P startet." }
+                        Repeater {
+                            model: [
+                                { k: "work", t: "Fokus", opts: [15, 20, 25, 30, 45, 50, 60], unit: " min" },
+                                { k: "short", t: "Kurze Pause", opts: [3, 5, 10], unit: " min" },
+                                { k: "long", t: "Lange Pause", opts: [10, 15, 20, 30], unit: " min" },
+                                { k: "rounds", t: "Lange Pause nach", opts: [2, 3, 4, 5, 6], unit: " Runden" }
+                            ]
+                            delegate: RowLayout {
+                                id: fr
+                                required property var modelData
+                                spacing: 8
+                                Text { Layout.preferredWidth: 140; text: fr.modelData.t; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx }
+                                Repeater {
+                                    model: fr.modelData.opts
+                                    delegate: Chip {
+                                        required property int modelData
+                                        text: modelData + fr.modelData.unit
+                                        selected: Config.focus[fr.modelData.k] === modelData
+                                        onClicked: Config.setFocus(fr.modelData.k, modelData)
+                                    }
+                                }
+                            }
+                        }
+                        SwitchRow {
+                            icon: "󰂛"
+                            title: "„Nicht stören“ während Fokus"
+                            sub: "Benachrichtigungen bleiben in der Zentrale, Popups erst in der Pause"
+                            checked: Config.focus.dnd
+                            onToggled: on => Config.setFocus("dnd", on)
+                        }
                     }
 
                     // ═════════════ Schrift ═════════════

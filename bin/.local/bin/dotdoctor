@@ -2,6 +2,7 @@
 """dotdoctor – findet stille Brüche im Setup (nach Updates oder Config-Umbauten).
 
   dotdoctor            alle Checks
+  dotdoctor --json     Ergebnis als JSON (für das Dashboard), ohne Farbausgabe
   dotdoctor --updates  zusätzlich Repo-/AUR-/Flatpak-Updates abfragen (braucht Netz, langsamer)
 
 Exit-Code 1, sobald ein ✗ auftaucht. Warnungen (⚠) ändern den Exit-Code nicht.
@@ -10,7 +11,9 @@ import os
 import re
 import shutil
 import subprocess
+import json
 import sys
+import time
 import tomllib
 from datetime import datetime
 from pathlib import Path
@@ -23,18 +26,27 @@ CURRENT_WALL = HOME / ".cache/wallpaper-picker/current"
 
 C = {"ok": "\033[32m✓\033[0m", "warn": "\033[33m⚠\033[0m", "fail": "\033[31m✗\033[0m"}
 failures = 0
+JSON = "--json" in sys.argv
+RESULTS: list[dict] = []
+SECTION = ""
 
 
 def report(state: str, msg: str, detail: str = "") -> None:
     global failures
     failures += state == "fail"
+    RESULTS.append({"section": SECTION, "state": state, "msg": msg, "detail": detail.strip().splitlines()[:8]})
+    if JSON:
+        return
     print(f"  {C[state]} {msg}")
     for line in detail.strip().splitlines()[:8]:
         print(f"      {line}")
 
 
 def section(name: str) -> None:
-    print(f"\n\033[1m{name}\033[0m")
+    global SECTION
+    SECTION = name
+    if not JSON:
+        print(f"\n\033[1m{name}\033[0m")
 
 
 def sh(cmd: str) -> tuple[int, str]:
@@ -357,7 +369,10 @@ def main() -> int:
     check_toolkits()
     check_dotfiles()
     check_system("--updates" in sys.argv)
-    print()
+    if JSON:
+        print(json.dumps({"time": int(time.time()), "results": RESULTS}, ensure_ascii=False))
+    else:
+        print()
     return 1 if failures else 0
 
 
