@@ -48,6 +48,10 @@ input_path  = '~/.config/fontgen/templates/vscode.json'
 output_path = '~/.cache/fontgen/vscode.json'
 post_hook   = 'python3 ~/.config/fontgen/vscode-fonts.py'
 
+[templates.quickshell]   # Theme.qml beobachtet die Datei
+input_path  = '~/.config/fontgen/templates/quickshell.json'
+output_path = '~/.config/quickshell/fonts.json'
+
 # ── Einzelne INI-Einträge ────────────────────────────────────────────────────
 [ini.gtk3]
 path = '~/.config/gtk-3.0/settings.ini'

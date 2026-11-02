@@ -89,3 +89,8 @@ post_hook = 'python3 ~/.config/matugen/vscode-theme.py'
 input_path = '~/.config/matugen/templates/folder-icons.txt'
 output_path = '~/.cache/matugen/folder-icons.txt'
 post_hook = 'python3 ~/.config/matugen/folder-icons.py'
+
+# Quickshell liest die Datei und beobachtet sie selbst (Theme.qml) – kein Hook nötig
+[templates.quickshell]
+input_path = '~/.config/matugen/templates/quickshell-colors.json'
+output_path = '~/.config/quickshell/colors.json'

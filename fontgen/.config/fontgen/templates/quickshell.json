@@ -1,0 +1,7 @@
+{
+  "ui": "{{fonts.ui}}",
+  "mono": "{{fonts.mono}}",
+  "accent": "{{fonts.accent}}",
+  "ui_px": {{fonts.ui_px}},
+  "mono_px": {{fonts.mono_px}}
+}

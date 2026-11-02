@@ -24,11 +24,14 @@ qt/.config/qt6ct/colors/
 gtk/.config/gtk-3.0/bookmarks
 
 # ── Von fontgen generiert ────────────────────────────────────────
+quickshell/.config/quickshell/fonts.json
 alacritty/.config/alacritty/fonts.toml
 ags/.config/ags/fonts.scss
 rofi/.config/rofi/fonts.rasi
 swaync/.config/swaync/fonts.css
 hypr/.config/hypr/themes/fonts.conf
+
+quickshell/.config/quickshell/colors.json
 
 # ── Von Hyprland autogeneriert ───────────────────────────────────
 hypr/.config/hypr/hyprland.conf
