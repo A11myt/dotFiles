@@ -138,11 +138,11 @@ PanelWindow {
         }
         if (raw.startsWith(">")) {                             // Befehl
             const cmd = raw.slice(1).trim()
-            return cmd ? [{ key: "cmd", glyph: "", title: cmd, sub: "Im Terminal ausführen", run: () => Quickshell.execDetached(["alacritty", "--hold", "-e", "bash", "-c", cmd]) }] : []
+            return cmd ? [{ key: "cmd", glyph: "󰆍", title: cmd, sub: "Im Terminal ausführen", run: () => Quickshell.execDetached(["alacritty", "--hold", "-e", "bash", "-c", cmd]) }] : []
         }
         if (q.startsWith("g ") && q.length > 2) {              // Websuche
             const s = raw.slice(2).trim()
-            return [{ key: "web", glyph: "", title: s, sub: "Im Web suchen", run: () => Qt.openUrlExternally("https://duckduckgo.com/?q=" + encodeURIComponent(s)) }]
+            return [{ key: "web", glyph: "󰖟", title: s, sub: "Im Web suchen", run: () => Qt.openUrlExternally("https://duckduckgo.com/?q=" + encodeURIComponent(s)) }]
         }
         const out = []
         const c = calc(raw)
@@ -234,7 +234,7 @@ PanelWindow {
                 RowLayout {
                     anchors { fill: parent; leftMargin: 14; rightMargin: 14 }
                     spacing: 10
-                    Text { text: ""; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 16 }
+                    Text { text: "󰍉"; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 16 }
                     TextInput {
                         id: search
                         Layout.fillWidth: true

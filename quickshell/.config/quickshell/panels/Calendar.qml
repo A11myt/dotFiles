@@ -38,6 +38,12 @@ DropPanel {
             color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx; font.bold: true
             Layout.fillWidth: true
         }
+        Rectangle {   // neuer Termin (öffnet die große Ansicht mit Formular)
+            implicitWidth: 28; implicitHeight: 24; radius: 8
+            color: newM.containsMouse ? Theme.primary : "transparent"
+            Text { anchors.centerIn: parent; text: "󰐕"; color: newM.containsMouse ? Theme.fgOnPrimary : Theme.primary; font.family: Theme.fontUi; font.pixelSize: 16 }
+            MouseArea { id: newM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Panels.close(); Quickshell.execDetached(["qs", "ipc", "call", "calendar", "add"]) } }
+        }
         Rectangle {   // große Ansicht
             implicitWidth: 28; implicitHeight: 24; radius: 8
             color: bigM.containsMouse ? Theme.surfaceContainerHighest : "transparent"
@@ -45,7 +51,7 @@ DropPanel {
             MouseArea { id: bigM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Panels.close(); Quickshell.execDetached(["qs", "ipc", "call", "calendar", "toggle"]) } }
         }
         Repeater {
-            model: [{ t: "", d: -1 }, { t: "", d: 1 }]
+            model: [{ t: "󰅁", d: -1 }, { t: "󰅂", d: 1 }]
             delegate: Rectangle {
                 required property var modelData
                 implicitWidth: 28; implicitHeight: 24; radius: 8

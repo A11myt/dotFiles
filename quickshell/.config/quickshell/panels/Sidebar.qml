@@ -731,6 +731,11 @@ PanelWindow {
                 Layout.fillWidth: true
                 Small { text: "󰃭  Termine"; color: Theme.fgMuted; Layout.fillWidth: true }
                 Text {
+                    text: "󰐕"; color: agAdd.containsMouse ? Theme.primary : Theme.fgMuted
+                    font.family: Theme.fontUi; font.pixelSize: 15
+                    MouseArea { id: agAdd; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { win.open = false; Quickshell.execDetached(["qs", "ipc", "call", "calendar", "add"]) } }
+                }
+                Text {
                     text: "󰑓"; color: agRef.containsMouse ? Theme.primary : Theme.fgMuted
                     font.family: Theme.fontUi; font.pixelSize: 14
                     RotationAnimation on rotation { running: Calendars.loading; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
