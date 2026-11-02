@@ -6,6 +6,10 @@
   wallthemes build             Cache für alle Bilder in ~/Pictures/wallpapers vorrendern
   wallthemes clean             Caches entfernen, deren Bild nicht mehr existiert
   wallthemes list              Gecachte Wallpaper anzeigen
+  wallthemes state             Einstellungen, aktuelles Bild und seine 4 Ausgangsfarben als JSON
+  wallthemes set <key> <wert>  [matugen]-Einstellung ändern (scheme, mode, source, contrast)
+                               und das aktuelle Wallpaper neu einfärben
+  wallthemes pick <0-3|auto>   Ausgangsfarbe für das aktuelle Wallpaper festlegen
 
 Cache: ~/.local/share/wallthemes/<bildname>/
   files/<absoluter Zielpfad>   alle gerenderten Configs (wie matugen --prefix sie ablegt)
@@ -40,19 +44,38 @@ DEFER_LOCK = HOME / ".cache/matugen/wallthemes-deferred.lock"
 CACHE = HOME / ".local/share/wallthemes"
 WALL_DIR = HOME / "Pictures/wallpapers"
 LOG = HOME / ".logs/wallthemes" / f"{datetime.now():%Y-%m-%d}.log"
-MODE = "dark"
+CURRENT = HOME / ".cache/wallpaper-picker/current"
+SCHEMES = ["tonal-spot", "vibrant", "expressive", "fidelity", "content", "fruit-salad", "rainbow", "neutral", "monochrome"]
+SOURCES = ["dominant", "value", "saturation", "lightness", "darkness", "less-saturation"]
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 HOOK_TIMEOUT = 60
 
 
-def matugen_args() -> list[str]:
-    """Schema und Ausgangsfarbe aus wallthemes.toml ([matugen] scheme/source)."""
-    rules = tomllib.loads(RULES.read_text()) if RULES.exists() else {}
-    m = rules.get("matugen", {})
-    args = ["-t", f"scheme-{m.get('scheme', 'tonal-spot')}"]
+def rules() -> dict:
+    return tomllib.loads(RULES.read_text()) if RULES.exists() else {}
+
+
+def mode() -> str:
+    return "light" if rules().get("matugen", {}).get("mode") == "light" else "dark"
+
+
+def matugen_args(image: Path) -> list[str]:
+    """Schema, Modus, Kontrast und Ausgangsfarbe aus wallthemes.toml.
+
+    [matugen] gilt für alle Bilder, [pick] legt pro Bild eine der 4 Ausgangsfarben fest."""
+    r = rules()
+    m = r.get("matugen", {})
+    args = ["-t", f"scheme-{m.get('scheme', 'tonal-spot')}", "-m", mode()]
+    if float(m.get("contrast", 0)):
+        args += ["--contrast", str(float(m["contrast"]))]
+    pick = r.get("pick", {}).get(image.name)
     source = m.get("source", "dominant")
-    # dominant = häufigste Farbe im Bild, sonst --prefer value/saturation/…
-    args += ["--source-color-index", "0"] if source == "dominant" else ["--prefer", source]
+    if isinstance(pick, int):
+        args += ["--source-color-index", str(pick)]
+    elif source == "dominant":   # häufigste Farbe im Bild
+        args += ["--source-color-index", "0"]
+    else:                        # --prefer value/saturation/…
+        args += ["--prefer", source]
     return args
 
 
@@ -82,7 +105,7 @@ def stamp_for(image: Path, cfg: dict) -> str:
         h.update(src.read_bytes() if src.exists() else b"missing")
     version = subprocess.run(["matugen", "--version"], capture_output=True, text=True).stdout
     h.update(version.encode())
-    h.update(" ".join(matugen_args() + [MODE]).encode())
+    h.update(" ".join(matugen_args(image)).encode())
     return h.hexdigest()
 
 
@@ -105,7 +128,7 @@ def render(image: Path, cfg: dict, target: Path, stamp: str) -> None:
 
         files = tmp / "files"
         r = subprocess.run(
-            ["matugen", "image", str(image), *matugen_args(), "-m", MODE,
+            ["matugen", "image", str(image), *matugen_args(image),
              "-c", str(cfg_file), "--prefix", str(files), "--json", "hex"],
             capture_output=True, text=True,
         )
@@ -189,7 +212,7 @@ def run_hooks(cfg: dict, image: Path, names: list[str]) -> int:
     with LOG.open("a") as logf:
         for name in names:
             hook = templates[name]["post_hook"]
-            hook = hook.replace("{{mode}}", MODE).replace("{{ mode }}", MODE)
+            hook = hook.replace("{{mode}}", mode()).replace("{{ mode }}", mode())
             hook = hook.replace("{{image}}", str(image)).replace("{{ image }}", str(image))
             if "{{" in hook:
                 log("WARN", f"{name}: unbekannter Platzhalter im Hook: {hook}")
@@ -263,11 +286,12 @@ def set_wallpaper(cfg: dict, image: Path) -> subprocess.Popen | None:
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
-def apply(image: Path, refresh: bool) -> int:
+def apply(image: Path, refresh: bool, set_wall: bool = True) -> int:
     t0 = time.monotonic()
     token = claim_token()
     cfg = load_config()
-    wp = set_wallpaper(cfg, image)  # sofort, die Übergangsanimation läuft parallel
+    # sofort, die Übergangsanimation läuft parallel (nicht beim bloßen Umfärben)
+    wp = set_wallpaper(cfg, image) if set_wall else None
     try:
         target, hit = ensure_cache(image, cfg, refresh)
     except RuntimeError as e:
@@ -325,6 +349,92 @@ def list_cache() -> int:
     return 0
 
 
+# ── Einstellungen (für die Quickshell-Einstellungen und die Kommandozeile) ───
+def current_image() -> Path | None:
+    p = CURRENT.resolve() if CURRENT.exists() else None
+    return p if p and p.is_file() else None
+
+
+def source_colors(image: Path) -> list[str]:
+    r = subprocess.run(["matugen", "image", str(image), "--show-source-colors"], capture_output=True, text=True)
+    return [l.strip() for l in r.stdout.splitlines() if l.strip().startswith("#")][:4]
+
+
+def edit_rules(section: str, key: str, value) -> None:
+    """Setzt key = value in [section] von wallthemes.toml, Kommentare bleiben erhalten.
+    value None entfernt den Eintrag."""
+    lines = RULES.read_text().splitlines() if RULES.exists() else []
+    head = f"[{section}]"
+    line = None if value is None else f"{json.dumps(key) if not key.isidentifier() else key} = {toml_value(value)}"
+    try:
+        start = next(i for i, l in enumerate(lines) if l.strip() == head)
+    except StopIteration:
+        if line:
+            lines += ["", head, line]
+    else:
+        end = next((i for i in range(start + 1, len(lines)) if lines[i].lstrip().startswith("[")), len(lines))
+        keys = (key, json.dumps(key))
+        idx = next((i for i in range(start + 1, end) if lines[i].split("=")[0].strip() in keys), None)
+        if idx is not None:
+            comment = lines[idx][lines[idx].index("#"):] if "#" in lines[idx].split("=", 1)[1] else ""
+            if line is None:
+                del lines[idx]
+            else:
+                lines[idx] = f"{line}   {comment}".rstrip() if comment else line
+        elif line:
+            while end > start + 1 and not lines[end - 1].strip():
+                end -= 1
+            lines.insert(end, line)
+    tmp = RULES.with_suffix(".tmp")
+    tmp.write_text("\n".join(lines) + "\n")
+    os.replace(tmp, RULES.resolve() if RULES.is_symlink() else RULES)
+    tmp.unlink(missing_ok=True)
+
+
+def state() -> int:
+    img = current_image()
+    m = rules().get("matugen", {})
+    print(json.dumps({
+        "image": str(img or ""),
+        "scheme": m.get("scheme", "tonal-spot"), "schemes": SCHEMES,
+        "mode": mode(),
+        "source": m.get("source", "dominant"), "sources": SOURCES,
+        "contrast": float(m.get("contrast", 0)),
+        "pick": rules().get("pick", {}).get(img.name) if img else None,
+        "colors": source_colors(img) if img else [],
+    }))
+    return 0
+
+
+def recolor() -> int:
+    img = current_image()
+    if not img:
+        log("ERROR", "kein aktuelles Wallpaper")
+        return 1
+    return apply(img, refresh=False, set_wall=False)
+
+
+def set_option(key: str, value: str) -> int:
+    allowed = {"scheme": SCHEMES, "mode": ["dark", "light"], "source": SOURCES}
+    if key == "contrast":
+        val = max(-1.0, min(1.0, float(value)))
+    elif key in allowed and value in allowed[key]:
+        val = value
+    else:
+        print(f"wallthemes: ungültig: {key} = {value}", file=sys.stderr)
+        return 2
+    edit_rules("matugen", key, val)
+    return recolor()
+
+
+def pick(value: str) -> int:
+    img = current_image()
+    if not img:
+        return 1
+    edit_rules("pick", img.name, None if value == "auto" else max(0, min(3, int(value))))
+    return recolor()
+
+
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help"):
         print(__doc__.strip())
@@ -338,6 +448,14 @@ def main(argv: list[str]) -> int:
         return clean()
     if cmd == "list":
         return list_cache()
+    if cmd == "state":
+        return state()
+    if cmd == "set" and len(argv) == 3:
+        return set_option(argv[1], argv[2])
+    if cmd == "pick" and len(argv) == 2:
+        return pick(argv[1])
+    if cmd == "recolor":
+        return recolor()
     image = Path(cmd).expanduser()
     if not image.is_file():
         log("ERROR", f"Bild nicht gefunden: {image}")

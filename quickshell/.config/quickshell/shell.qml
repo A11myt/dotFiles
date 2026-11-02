@@ -32,6 +32,7 @@ ShellRoot {
     PowerMenu {}
     Overview {}
     Launcher {}
+    Settings {}
 
     // Fernsteuerung für Tastenkombinationen: qs ipc call panels toggle center|quick|calendar|clipboard
     IpcHandler {

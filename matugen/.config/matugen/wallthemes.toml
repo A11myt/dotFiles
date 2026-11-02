@@ -13,6 +13,7 @@ delay = 0   # Sekunden Wartezeit vor dem Hintergrund-Lauf
 scheme = "vibrant"
 # Ausgangsfarbe: dominant = häufigste Farbe im Bild, value = hellste, saturation = gesättigtste
 source = "value"
+mode = "dark"
 
 [defer]
 # Template = Prozessnamen (wie in /proc/<pid>/comm), oder "always"

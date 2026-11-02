@@ -4,6 +4,8 @@
   fontgen               aktives Profil (neu) anwenden
   fontgen use <profil>  Profil aktivieren und anwenden
   fontgen list          Profile anzeigen, prüfen ob die Schriften installiert sind
+  fontgen size <ui> <mono>  Schriftgrößen (pt) des aktiven Profils ändern und anwenden
+  fontgen state         Profile, aktives Profil und Größen als JSON (für die Einstellungen)
 
 Konfiguration: ~/.config/fontgen/config.toml
   profile = "<aktives Profil>"
@@ -15,6 +17,7 @@ Konfiguration: ~/.config/fontgen/config.toml
 Platzhalter in Templates, INI-Werten und Hooks: {{fonts.ui}}, {{fonts.mono}}, {{fonts.accent}},
 {{fonts.ui_size}}, {{fonts.mono_size}}, {{fonts.ui_px}}, {{fonts.mono_px}}
 """
+import json
 import os
 import re
 import subprocess
@@ -146,6 +149,35 @@ def use(name: str) -> int:
     return apply(tomllib.loads(text))
 
 
+def size(ui: str, mono: str) -> int:
+    """Ändert ui_size/mono_size im Abschnitt des aktiven Profils, der Rest der Datei bleibt."""
+    ui_v, mono_v = (max(7.0, min(20.0, float(x))) for x in (ui, mono))
+    fmt = lambda v: str(int(v)) if v == int(v) else str(v)
+    text = CONFIG.read_text()
+    name = tomllib.loads(text).get("profile")
+    m = re.search(rf'(?ms)^\[profiles\.{re.escape(name)}\]\n(.*?)(?=^\[|\Z)', text)
+    if not m:
+        print(f"fontgen: Profil '{name}' nicht gefunden", file=sys.stderr)
+        return 1
+    body = re.sub(r'(?m)^(ui_size\s*=\s*)\S+', rf'\g<1>{fmt(ui_v)}', m.group(1))
+    body = re.sub(r'(?m)^(mono_size\s*=\s*)\S+', rf'\g<1>{fmt(mono_v)}', body)
+    text = text[:m.start(1)] + body + text[m.end(1):]
+    CONFIG.write_text(text)
+    return apply(tomllib.loads(text))
+
+
+def state(cfg: dict) -> int:
+    have = installed_families()
+    print(json.dumps({
+        "profile": cfg.get("profile"),
+        "profiles": [{"name": n, "ui": p["ui"], "mono": p["mono"], "accent": p["accent"],
+                      "ui_size": p["ui_size"], "mono_size": p["mono_size"],
+                      "installed": all(p[r] in have for r in ("ui", "mono", "accent"))}
+                     for n, p in cfg.get("profiles", {}).items()],
+    }))
+    return 0
+
+
 def list_profiles(cfg: dict) -> int:
     have = installed_families()
     for name, p in cfg.get("profiles", {}).items():
@@ -169,6 +201,10 @@ def main(argv: list[str]) -> int:
         return use(argv[1])
     if argv[0] == "list":
         return list_profiles(cfg)
+    if argv[0] == "state":
+        return state(cfg)
+    if argv[0] == "size" and len(argv) == 3:
+        return size(argv[1], argv[2])
     print(__doc__.strip(), file=sys.stderr)
     return 1
 

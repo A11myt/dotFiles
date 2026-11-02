@@ -23,6 +23,7 @@ hl.bind(mainMod .. " + A",            hl.dsp.exec_cmd("qs ipc call panels toggle
 hl.bind(mainMod .. " + S",            hl.dsp.exec_cmd("qs ipc call panels toggle quick"))      -- Quick Settings
 hl.bind(mainMod .. " + grave",        hl.dsp.exec_cmd("~/.local/bin/dropdown"))   -- Drop-down-Terminal (Taste links neben 1)
 hl.bind(mainMod .. " + TAB",          hl.dsp.exec_cmd("qs ipc call overview toggle"))          -- Fensterübersicht
+hl.bind(mainMod .. " + I",            hl.dsp.exec_cmd("qs ipc call settings toggle"))          -- Einstellungen
 hl.bind(mainMod .. " + SHIFT + V",    hl.dsp.exec_cmd("qs ipc call panels toggle clipboard"))  -- Zwischenablage-Verlauf
 hl.bind(mainMod .. " + H",            hl.dsp.exec_cmd("hyprpicker -a -n -l"))
 hl.bind(mainMod .. " + W",            hl.dsp.exec_cmd("qs ipc call launcher wallpapers"))

@@ -44,4 +44,4 @@ hl.window_rule({
 })
 
 -- Quickshell-Oberfläche: Unschärfe hinter den halbtransparenten Fenstern
-hl.layer_rule({ match = { namespace = "^qs-(bar|notifications|notification-center|osd|quick-settings|calendar|clipboard|power|overview|launcher)$" }, blur = true, ignore_alpha = 0.3 })
+hl.layer_rule({ match = { namespace = "^qs-(bar|notifications|notification-center|osd|quick-settings|calendar|clipboard|power|overview|launcher|settings)$" }, blur = true, ignore_alpha = 0.3 })
