@@ -1,0 +1,7 @@
+/* Generated with fontgen – eingebunden von config.rasi */
+* {
+    font-text:      "{{fonts.mono}} 11";
+    font-input:     "{{fonts.mono}} 12";
+    font-accent:    "{{fonts.accent}} 14";
+    font-accent-sm: "{{fonts.accent}} 13";
+}

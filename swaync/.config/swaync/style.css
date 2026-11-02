@@ -1,8 +1,8 @@
 @import 'colors/colors.css';
+@import 'fonts.css';   /* fontgen */
 
 * {
   font-size: 14px;
-  font-family: "Noto Sans";
   transition: 100ms;
   box-shadow: unset;
 }
@@ -91,14 +91,12 @@ window.background,
 
 .control-center .notification-row .notification-background .notification .notification-content .summary,
 .floating-notifications.background .notification-background .notification .notification-content .summary {
-  font-family: 'Gabarito', 'Lexend', sans-serif;
   font-size: 0.9909rem;
   font-weight: 500;
 }
 
 .control-center .notification-row .notification-background .notification .notification-content .time,
 .floating-notifications.background .notification-background .notification .notification-content .time {
-  font-family: 'Geist', 'AR One Sans', 'Inter', 'Roboto', 'Noto Sans', 'Ubuntu', sans-serif;
   font-size: 0.8291rem;
   font-weight: 500;
   margin-right: 1rem;
@@ -107,7 +105,6 @@ window.background,
 
 .control-center .notification-row .notification-background .notification .notification-content .body,
 .floating-notifications.background .notification-background .notification .notification-content .body {
-  font-family: 'Noto Sans', sans-serif;
   font-size: 0.8891rem;
   font-weight: 400;
   margin-top: 0.310rem;
@@ -179,7 +176,6 @@ window.background,
 }
 
 .widget-title label {
-  font-family: 'Gabarito', 'Lexend', sans-serif;
   font-size: 1.364rem;
   color: @on_surface;
   margin-left: 0.941rem;
@@ -195,7 +191,6 @@ window.background,
 }
 
 .widget-title button label {
-  font-family: 'Gabarito', sans-serif;
   font-size: 1.0409rem;
   color: @on_surface;
   margin-right: 0.841rem;

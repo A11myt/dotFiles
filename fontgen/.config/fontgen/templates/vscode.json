@@ -1,0 +1,4 @@
+{
+  "editor.fontFamily": "'{{fonts.mono}}', monospace",
+  "terminal.integrated.fontFamily": "'{{fonts.mono}}'"
+}

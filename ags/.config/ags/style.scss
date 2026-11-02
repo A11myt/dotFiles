@@ -1,18 +1,17 @@
 @use "colors" as *;
+@use "fonts" as *;   // fontgen: $font-main, $font-dot, $font-size
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 $orange:      #ff6a00;
 $pill-bg:     rgba($surface_variant, 0.05);
 $pill-hover:  rgba($surface_variant, 0.08);
 $pill-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
-$font-main:   "Iosevka Nerd Font Propo";
-$font-dot:    "NDOT 47 (inspired by NOTHING)", "Iosevka Nerd Font Propo";
 
 // ── Base reset ─────────────────────────────────────────────────────────────
 * {
     all: unset;
     font-family: $font-main;
-    font-size: 13px;
+    font-size: $font-size;
     color: $on_surface;
     transition: background 250ms, color 250ms, box-shadow 250ms;
 }

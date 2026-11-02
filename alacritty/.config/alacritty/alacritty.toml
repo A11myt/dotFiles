@@ -1,24 +1,10 @@
 [general]
 live_config_reload = true
-import = ["~./colors/matugen.toml"]
+# relativ zu dieser Datei; Farben von Matugen, Schriften von fontgen
+# (vorher "~./colors/…" – der Pfad existierte nicht, die Matugen-Farben wurden nie geladen)
+import = ["colors/matugen.toml", "fonts.toml"]
 
-[font]
-size = 10
-
-[font.normal]
-family = "Iosevka Nerd Font Mono"
-style = "Regular"
-
-# Bold = Nothing Dot-Matrix – für Prompts, Überschriften etc.
-# [font.bold]
-# family = "NDOT 47 (inspired by NOTHING)"
-# style = "Regular"
-
-# Optional: falls du italic brauchst, sonst weglassen
-[font.bold_italic]
-family = "NDOT 47 (inspired by NOTHING)"
-style = "Regular"
-
+# Schriftfamilie/-größe: fonts.toml (fontgen). Hier nur der Feinschliff:
 
 [font.offset]
 x = 0
@@ -49,36 +35,5 @@ unfocused_hollow = true
 blinking = "On"
 shape = "Beam"
 
-# [colors.cursor]
-# cursor = "0xffffff"
-# text = "0x0f0f0f"
-#
-# [colors.primary]
-# background = "#0f0f0f"
-# foreground = "#f2f2f2"        # leicht angepasst, matcht eher Nothing/Waybar
-
-# [colors.selection]
-# background = "0xffffff"
-# text = "0x0f0f0f"
-
-# Monochrom-ish + Orange-Akzent
-[colors.normal]
-black   = "#151515"
-red     = "#ff6a00"  # Orange Akzent (statt knallrot)
-# green   = "#bfbfbf"
-# yellow  = "#ffb366"  # softer Orange-Ton
-# blue    = "#d0d0d0"
-# magenta = "#c8c8c8"
-# cyan    = "#d8d8d8"
-# white   = "#e5e5e5"
-#
-[colors.bright]
-black   = "#3a3a3a"
-red     = "#ff8a33"  # heller Orange-Ton
-# green   = "#e0e0e0"
-# yellow  = "#ffd199"
-# blue    = "#f0f0f0"
-# magenta = "#fafafa"
-# cyan    = "#ffffff"
-# white   = "#ffffff"
-#
+# Farben kommen komplett aus colors/matugen.toml (Matugen). Feste Werte hier würden
+# den Import überschreiben – die Hauptdatei hat Vorrang.

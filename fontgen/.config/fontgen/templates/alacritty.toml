@@ -1,0 +1,11 @@
+# Generated with fontgen – eingebunden von alacritty.toml
+[font]
+size = {{fonts.mono_size}}
+
+[font.normal]
+family = "{{fonts.mono}}"
+style = "Regular"
+
+[font.bold_italic]
+family = "{{fonts.accent}}"
+style = "Regular"

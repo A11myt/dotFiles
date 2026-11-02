@@ -1,0 +1,100 @@
+# fontgen – Schriften systemweit aus einer Quelle (Aufruf: fontgen / fontgen use <profil> / fontgen list)
+profile = "iosevka"
+
+# ── Profile ──────────────────────────────────────────────────────────────────
+# ui = Oberflächen (GTK, Qt, Leiste, Benachrichtigungen), mono = Terminal/Code,
+# accent = Akzent/Überschriften. Größen in pt (px wird daraus berechnet).
+[profiles.iosevka]
+ui        = "Iosevka Nerd Font Propo"
+mono      = "Iosevka Nerd Font Mono"
+accent    = "NDOT 47 (inspired by NOTHING)"
+ui_size   = 10
+mono_size = 10
+
+[profiles.hack]
+ui        = "Hack Nerd Font Propo"
+mono      = "Hack Nerd Font Mono"
+accent    = "NDOT 47 (inspired by NOTHING)"
+ui_size   = 10
+mono_size = 10
+
+[profiles.jetbrains]
+ui        = "JetBrainsMono Nerd Font Propo"
+mono      = "JetBrainsMono Nerd Font Mono"
+accent    = "NDOT 47 (inspired by NOTHING)"
+ui_size   = 10
+mono_size = 10
+
+# ── Templates: erzeugte Dateien, die die Apps einbinden ─────────────────────
+[templates.alacritty]   # live_config_reload lädt Imports automatisch neu
+input_path  = '~/.config/fontgen/templates/alacritty.toml'
+output_path = '~/.config/alacritty/fonts.toml'
+
+[templates.ags]         # AGS beobachtet fonts.scss und lädt das CSS live neu
+input_path  = '~/.config/fontgen/templates/ags.scss'
+output_path = '~/.config/ags/fonts.scss'
+
+[templates.rofi]        # wird beim nächsten Öffnen gelesen
+input_path  = '~/.config/fontgen/templates/rofi.rasi'
+output_path = '~/.config/rofi/fonts.rasi'
+
+[templates.swaync]
+input_path  = '~/.config/fontgen/templates/swaync.css'
+output_path = '~/.config/swaync/fonts.css'
+post_hook   = 'swaync-client -rs >/dev/null 2>&1; true'
+
+[templates.hyprlock]    # beim nächsten Sperren
+input_path  = '~/.config/fontgen/templates/hyprlock.conf'
+output_path = '~/.config/hypr/themes/fonts.conf'
+
+[templates.vscode]
+input_path  = '~/.config/fontgen/templates/vscode.json'
+output_path = '~/.cache/fontgen/vscode.json'
+post_hook   = 'python3 ~/.config/fontgen/vscode-fonts.py'
+
+# ── Einzelne INI-Einträge ────────────────────────────────────────────────────
+[ini.gtk3]
+path = '~/.config/gtk-3.0/settings.ini'
+section = 'Settings'
+key = 'gtk-font-name'
+value = '{{fonts.ui}} {{fonts.ui_size}}'
+
+[ini.gtk4]
+path = '~/.config/gtk-4.0/settings.ini'
+section = 'Settings'
+key = 'gtk-font-name'
+value = '{{fonts.ui}} {{fonts.ui_size}}'
+
+# Qt-Fontstring: Familie,pt,px,Stil-Hint,Gewicht,…  (Qt5-Format, Qt6 liest es auch)
+[ini.qt5ct-general]
+path = '~/.config/qt5ct/qt5ct.conf'
+section = 'Fonts'
+key = 'general'
+value = '"{{fonts.ui}},{{fonts.ui_size}},-1,5,50,0,0,0,0,0"'
+
+[ini.qt5ct-fixed]
+path = '~/.config/qt5ct/qt5ct.conf'
+section = 'Fonts'
+key = 'fixed'
+value = '"{{fonts.mono}},{{fonts.mono_size}},-1,5,50,0,0,0,0,0"'
+
+[ini.qt6ct-general]
+path = '~/.config/qt6ct/qt6ct.conf'
+section = 'Fonts'
+key = 'general'
+value = '"{{fonts.ui}},{{fonts.ui_size}},-1,5,50,0,0,0,0,0"'
+
+[ini.qt6ct-fixed]
+path = '~/.config/qt6ct/qt6ct.conf'
+section = 'Fonts'
+key = 'fixed'
+value = '"{{fonts.mono}},{{fonts.mono_size}},-1,5,50,0,0,0,0,0"'
+
+# ── Hooks ────────────────────────────────────────────────────────────────────
+[hooks]
+commands = [
+  # GTK-Apps übernehmen das live (Wayland liest die Werte über gsettings/Portal)
+  "gsettings set org.gnome.desktop.interface font-name '{{fonts.ui}} {{fonts.ui_size}}'",
+  "gsettings set org.gnome.desktop.interface document-font-name '{{fonts.ui}} {{fonts.ui_size}}'",
+  "gsettings set org.gnome.desktop.interface monospace-font-name '{{fonts.mono}} {{fonts.mono_size}}'",
+]

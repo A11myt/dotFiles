@@ -14,14 +14,16 @@ app.start({
     main() {
         app.get_monitors().map(Bar)
 
-        // Matugen schreibt colors.scss → CSS live neu kompilieren und anwenden.
+        // Matugen schreibt colors.scss, fontgen fonts.scss → CSS live neu kompilieren und anwenden.
         // Kein Neustart: Update-Check, Wetter und Widget-Zustand bleiben erhalten,
         // die transition in style.scss blendet die Farben weich über.
-        monitorFile(`${AGS_DIR}/colors.scss`, (_path, event) => {
+        const reloadCss = (_path: string, event: Gio.FileMonitorEvent) => {
             if (event !== Gio.FileMonitorEvent.CHANGES_DONE_HINT) return
             execAsync(["sass", "--no-source-map", `--load-path=${AGS_DIR}`, `${AGS_DIR}/style.scss`])
                 .then(css => app.apply_css(css, true))
                 .catch(e => printerr(`ags: CSS-Reload fehlgeschlagen: ${e}`))
-        })
+        }
+        monitorFile(`${AGS_DIR}/colors.scss`, reloadCss)   // Matugen
+        monitorFile(`${AGS_DIR}/fonts.scss`, reloadCss)    // fontgen
     },
 })

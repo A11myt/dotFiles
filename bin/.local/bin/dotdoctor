@@ -182,6 +182,30 @@ def check_toolkits() -> None:
         ok = css.exists() and "colors.css" in css.read_text()
         report("ok" if ok else "fail", f"gtk-{v}/gtk.css bindet colors.css ein")
 
+    # Datei erzeugt ≠ Datei geladen: Alacritty meldet fehlende Imports nur im Verbose-Log
+    if shutil.which("alacritty"):
+        rc, out = sh("timeout 3 alacritty -vv -e true 2>&1")
+        lost = re.findall(r'import not found:\s*"([^"]+)"', out)
+        report("fail" if lost else "ok",
+               "Alacritty lädt alle Imports (Farben, Schriften)" if not lost
+               else "Alacritty findet Imports nicht", "\n".join(lost))
+
+    fontgen_cfg = HOME / ".config/fontgen/config.toml"
+    if fontgen_cfg.exists():
+        try:
+            fcfg = tomllib.loads(fontgen_cfg.read_text())
+            prof = fcfg.get("profiles", {}).get(fcfg.get("profile"), {})
+            have = sh("fc-list : family")[1]
+            fams = {f.strip() for line in have.splitlines() for f in line.split(",")}
+            missing = [prof.get(r) for r in ("ui", "mono", "accent") if prof.get(r) not in fams]
+            outs = [expand(t["output_path"]) for t in fcfg.get("templates", {}).values()]
+            gone = [str(o) for o in outs if not o.exists()]
+            state = "fail" if missing or gone else "ok"
+            report(state, f"fontgen: Profil {fcfg.get('profile')}" + ("" if state == "ok" else " unvollständig"),
+                   "\n".join([f"nicht installiert: {m}" for m in missing] + [f"fehlt: {g}" for g in gone]))
+        except Exception as e:  # noqa: BLE001
+            report("fail", f"fontgen/config.toml nicht lesbar: {e}")
+
     if not shutil.which("qt6ct"):
         report("warn", "qt6ct nicht installiert → Qt-Apps ohne Matugen-Farben")
     else:

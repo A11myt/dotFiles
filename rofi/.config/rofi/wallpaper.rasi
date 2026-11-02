@@ -32,6 +32,6 @@ element-text {
 }
 
 element-text selected {
-    font:             "Iosevka Nerd Font Mono 11";
+    font:             @font-text;
     letter-spacing:   0;
 }
