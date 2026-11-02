@@ -376,7 +376,15 @@ PanelWindow {
                                     Text { text: "󰑫"; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 18 }
                                     ColumnLayout {
                                         Layout.fillWidth: true; spacing: 0
-                                        Text { text: feed.modelData.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx; font.bold: true }
+                                        RowLayout {
+                                            spacing: 8
+                                            Text { text: feed.modelData.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx; font.bold: true }
+                                            Rectangle {
+                                                implicitWidth: tpTxt.implicitWidth + 12; implicitHeight: 18; radius: 6
+                                                color: Qt.alpha(Theme.primary, 0.18)
+                                                Text { id: tpTxt; anchors.centerIn: parent; text: Config.topicOf(feed.modelData.name); color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 10 }
+                                            }
+                                        }
                                         Text { Layout.fillWidth: true; text: feed.modelData.url; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; elide: Text.ElideMiddle }
                                     }
                                     Chip { text: "󰅖"; onClicked: Config.set("feeds", Config.feeds.filter((_, i) => i !== feed.index)) }
@@ -387,7 +395,8 @@ PanelWindow {
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 8
-                            Field { id: feedName; Layout.preferredWidth: 150; placeholder: "Name" }
+                            Field { id: feedName; Layout.preferredWidth: 120; placeholder: "Name" }
+                            Field { id: feedTopic; Layout.preferredWidth: 110; placeholder: "Thema" }
                             Field { id: feedUrl; Layout.fillWidth: true; placeholder: "https://…/feed.xml"; onAccepted: addFeed.clicked() }
                             Chip {
                                 id: addFeed
@@ -397,31 +406,33 @@ PanelWindow {
                                     const url = feedUrl.text.trim()
                                     if (!/^https?:\/\//.test(url)) return
                                     const name = feedName.text.trim() || url.replace(/^https?:\/\/(www\.)?/, "").split(/[\/.]/)[0]
-                                    Config.set("feeds", Config.feeds.concat([{ name, url }]))
-                                    feedName.text = ""; feedUrl.text = ""
+                                    Config.set("feeds", Config.feeds.concat([{ name, url, topic: feedTopic.text.trim() || "Allgemein" }]))
+                                    feedName.text = ""; feedUrl.text = ""; feedTopic.text = ""
                                 }
                             }
                         }
-                        Section { title: "Vorschläge"; sub: "Antippen zum Hinzufügen" }
-                        Flow {
-                            Layout.fillWidth: true
-                            spacing: 8
-                            Repeater {
-                                model: [
-                                    { name: "tagesschau", url: "https://www.tagesschau.de/index~rss2.xml" },
-                                    { name: "heise", url: "https://www.heise.de/rss/heise-top-atom.xml" },
-                                    { name: "Spiegel", url: "https://www.spiegel.de/schlagzeilen/index.rss" },
-                                    { name: "Zeit", url: "https://newsfeed.zeit.de/index" },
-                                    { name: "golem", url: "https://rss.golem.de/rss.php?feed=ATOM1.0" },
-                                    { name: "t3n", url: "https://t3n.de/rss.xml" },
-                                    { name: "Arch Linux", url: "https://archlinux.org/feeds/news/" },
-                                    { name: "Hacker News", url: "https://hnrss.org/frontpage" },
-                                    { name: "kicker", url: "https://newsfeed.kicker.de/news/aktuell" }
-                                ].filter(f => !Config.feeds.some(x => x.url === f.url))
-                                delegate: Chip {
-                                    required property var modelData
-                                    text: "󰐕  " + modelData.name
-                                    onClicked: Config.set("feeds", Config.feeds.concat([modelData]))
+                        Section { title: "Vorschläge"; sub: "Antippen zum Hinzufügen (Thema wird übernommen)" }
+                        Repeater {
+                            model: [...new Set(Config.feedSuggestions.map(f => f.topic))]
+                            delegate: RowLayout {
+                                id: sugRow
+                                required property string modelData
+                                readonly property var items: Config.feedSuggestions.filter(f => f.topic === modelData && !Config.feeds.some(x => x.url === f.url))
+                                visible: items.length > 0
+                                Layout.fillWidth: true
+                                spacing: 10
+                                Text { Layout.preferredWidth: 80; Layout.alignment: Qt.AlignTop; Layout.topMargin: 8; text: sugRow.modelData; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: true }
+                                Flow {
+                                    Layout.fillWidth: true
+                                    spacing: 8
+                                    Repeater {
+                                        model: sugRow.items
+                                        delegate: Chip {
+                                            required property var modelData
+                                            text: "󰐕  " + modelData.name
+                                            onClicked: Config.set("feeds", Config.feeds.concat([modelData]))
+                                        }
+                                    }
                                 }
                             }
                         }

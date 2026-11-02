@@ -141,6 +141,7 @@ PanelWindow {
     Timer { interval: 15 * 60000; repeat: true; running: win.open && win.has("news"); onTriggered: win.loadNews(false) }
     Connections { target: Config; function onFeedsChanged() { if (win.open) win.loadNews(false) } }
     readonly property var shownNews: news.filter(n => n.error || Config.newsHidden.indexOf(n.link) < 0)
+                                         .filter(n => Config.newsTopic === "Alle" || Config.topicOf(n.source) === Config.newsTopic)
                                          .slice(0, newsMore ? Config.newsCount * 3 : Config.newsCount)
     function hideNews(link) { Config.set("newsHidden", Config.newsHidden.concat([link]).slice(-300)) }
     function ago(t) {
@@ -405,6 +406,23 @@ PanelWindow {
                     font.family: Theme.fontUi; font.pixelSize: 14
                     RotationAnimation on rotation { running: win.newsLoading; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
                     MouseArea { id: refreshM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.loadNews(true) }
+                }
+            }
+            // Themen-Reiter
+            Flow {
+                visible: Config.topics.length > 1
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: ["Alle"].concat(Config.topics)
+                    delegate: Rectangle {
+                        required property string modelData
+                        readonly property bool sel: Config.newsTopic === modelData || (modelData === "Alle" && Config.topics.indexOf(Config.newsTopic) < 0)
+                        implicitWidth: topTxt.implicitWidth + 18; implicitHeight: 24; radius: 8
+                        color: sel ? Theme.primary : (topM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer)
+                        Text { id: topTxt; anchors.centerIn: parent; text: modelData; color: parent.sel ? Theme.fgOnPrimary : Theme.fg; font.family: Theme.fontUi; font.pixelSize: 11 }
+                        MouseArea { id: topM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Config.set("newsTopic", modelData); win.newsMore = false } }
+                    }
                 }
             }
             Small { visible: Config.feeds.length === 0; text: "Keine Quellen – in den Einstellungen (SUPER+I → Nachrichten) hinzufügen." }

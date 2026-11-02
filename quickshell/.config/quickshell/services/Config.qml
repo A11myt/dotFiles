@@ -12,6 +12,33 @@ Singleton {
     readonly property alias feeds: data.feeds
     readonly property alias newsCount: data.newsCount
     readonly property alias newsHidden: data.newsHidden
+    readonly property alias newsTopic: data.newsTopic
+    // Themen der Feeds (Reihenfolge der Reiter), Vorschläge pro Thema
+    readonly property var topics: [...new Set(data.feeds.map(f => topicOf(f.name)))]
+    readonly property var feedSuggestions: [
+        { topic: "Allgemein", name: "tagesschau", url: "https://www.tagesschau.de/index~rss2.xml" },
+        { topic: "Allgemein", name: "Spiegel", url: "https://www.spiegel.de/schlagzeilen/index.rss" },
+        { topic: "Allgemein", name: "Zeit", url: "https://newsfeed.zeit.de/index" },
+        { topic: "Tech", name: "heise", url: "https://www.heise.de/rss/heise-top-atom.xml" },
+        { topic: "Tech", name: "golem", url: "https://rss.golem.de/rss.php?feed=ATOM1.0" },
+        { topic: "Tech", name: "t3n", url: "https://t3n.de/rss.xml" },
+        { topic: "Tech", name: "Arch Linux", url: "https://archlinux.org/feeds/news/" },
+        { topic: "Tech", name: "Hacker News", url: "https://hnrss.org/frontpage" },
+        { topic: "Gaming", name: "Wowhead", url: "https://www.wowhead.com/news/rss/all" },
+        { topic: "Gaming", name: "MeinMMO", url: "https://mein-mmo.de/feed/" },
+        { topic: "Gaming", name: "GameStar", url: "https://www.gamestar.de/news/rss/news.rss" },
+        { topic: "Gaming", name: "PCGH", url: "https://www.pcgameshardware.de/feed.cfm" },
+        { topic: "Gaming", name: "PC Gamer", url: "https://www.pcgamer.com/rss/" },
+        { topic: "Gaming", name: "Rock Paper Shotgun", url: "https://www.rockpapershotgun.com/feed" },
+        { topic: "Gaming", name: "Eurogamer", url: "https://www.eurogamer.de/feed" },
+        { topic: "Gaming", name: "Steam", url: "https://store.steampowered.com/feeds/news/" },
+        { topic: "Sport", name: "kicker", url: "https://newsfeed.kicker.de/news/aktuell" }
+    ]
+    // Thema eines Feeds: eigenes Feld, sonst aus den Vorschlägen, sonst „Allgemein“
+    function topicOf(name) {
+        const f = data.feeds.find(x => x.name === name)
+        return f?.topic || feedSuggestions.find(x => x.name === name)?.topic || "Allgemein"
+    }
     readonly property alias bar: data.bar
     readonly property alias focus: data.focus
 
@@ -58,6 +85,7 @@ Singleton {
             ]
             property int newsCount: 6
             property var newsHidden: []        // weggeklickte Schlagzeilen (Links)
+            property string newsTopic: "Alle"  // gewählter Reiter im Nachrichten-Widget
             property var bar: ({})              // Schlüssel aus barInfo → false = ausgeblendet
             // Fokus-Timer: Minuten, lange Pause nach n Runden, „Nicht stören“ während Fokus
             property var focus: ({ work: 25, short: 5, long: 15, rounds: 4, dnd: true })

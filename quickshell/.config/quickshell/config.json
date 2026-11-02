@@ -14,6 +14,11 @@
         {
             "name": "Arch Linux",
             "url": "https://archlinux.org/feeds/news/"
+        },
+        {
+            "name": "Wowhead",
+            "url": "https://www.wowhead.com/news/rss/all",
+            "topic": "Gaming"
         }
     ],
     "newsCount": 5,
@@ -37,5 +42,6 @@
         "processes",
         "media",
         "battery"
-    ]
+    ],
+    "newsTopic": "Alle"
 }
