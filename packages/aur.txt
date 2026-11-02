@@ -1,6 +1,3 @@
-aylurs-gtk-shell-git
-libastal-git
-libastal-meta
 luajit-tiktoken-bin
 matugen-bin
 omnisharp-roslyn-bin

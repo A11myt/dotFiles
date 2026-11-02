@@ -66,7 +66,6 @@ output_path = '~/.config/nvim/lua/config/matugen_colors.lua'
 post_hook = 'pkill -SIGUSR1 nvim; python3 ~/.config/matugen/godot-theme.py'
 
 
-# kein Hook: AGS beobachtet colors.scss und lädt das CSS live neu (app.ts)
 
 [templates.regreet]
 input_path = '~/.config/matugen/templates/regreet.css'

@@ -18,11 +18,6 @@ hl.window_rule({ match = { class = "^(blueman-manager)$" }, float = true })
 
 -- opacity rules (format: "active inactive")
 hl.window_rule({ match = { class = "^(Rofi)$" },           opacity = "0.92 0.92" })
-hl.layer_rule({ match = { namespace = "ags-power" },                blur = true })
-hl.layer_rule({ match = { namespace = "ags-quick-settings" },       blur = true })
-hl.layer_rule({ match = { namespace = "ags-calendar" },             blur = true })
-hl.layer_rule({ match = { namespace = "ags-osd" },                  blur = true })
-hl.layer_rule({ match = { namespace = "ags-clipboard" },            blur = true })
 hl.window_rule({ match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" }, opacity = "0.85 0.85" })
 hl.window_rule({ match = { class = "^(blueman-manager)$" },opacity = "0.88 0.88" })
 hl.window_rule({ match = { class = "^(Alacritty)$" },      opacity = "0.90 0.90" })
@@ -37,9 +32,6 @@ hl.window_rule({
 })
 
 -- layer rules
-hl.layer_rule({ match = { namespace = "logout_dialog" },            blur = true })
-hl.layer_rule({ match = { namespace = "ags-notification-center" },  blur = true })
-hl.layer_rule({ match = { namespace = "ags-notifications" },        blur = true })
 
 -- Drop-down-Terminal (dropdown-Skript, SUPER+`): schwebend oben, auf eigenem Scratchpad
 hl.window_rule({

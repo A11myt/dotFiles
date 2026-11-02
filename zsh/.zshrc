@@ -119,7 +119,6 @@ nvm() { unfunction nvm; source /usr/share/nvm/init-nvm.sh; nvm "$@" }
 export PATH="$HOME/.local/bin:$PATH"
 . "/home/jason/.deno/env"
 
-# AGS bar
 alias qs-restart='qs kill; setsid -f qs >> ~/.logs/quickshell.log 2>&1'   # Oberfläche neu starten
 export PATH="$PATH:$HOME/flutter/bin"
 

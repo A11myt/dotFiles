@@ -5,7 +5,7 @@ source "$HOME/.config/scripts/log.sh"
 LAT="49.66"
 LON="9.00"
 
-CACHE="/tmp/ags-weather.json"
+CACHE="/tmp/qs-weather.json"
 URL="https://api.open-meteo.com/v1/forecast?latitude=${LAT}&longitude=${LON}&current_weather=true"
 
 # Cache jünger als 9 min → kein Netzabruf (Intervall im Widget: 10 min)

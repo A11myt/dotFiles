@@ -218,20 +218,13 @@ Accent nur subtil für Hover / Active.
 ## 📦 Required Packages
 
 ```bash
-sudo pacman -S hyprland
-sudo pacman -S alacritty
-sudo pacman -S thunar
-sudo pacman -S wofi
-sudo pacman -S hyprlock
-sudo pacman -S grim slurp
-sudo pacman -S brightnessctl
-sudo pacman -S playerctl
+sudo pacman -S hyprland hyprlock hypridle
+sudo pacman -S quickshell            # Oberfläche: Leiste, Benachrichtigungen, Panels
+sudo pacman -S alacritty nautilus rofi
+sudo pacman -S grim slurp wl-clipboard cliphist
+sudo pacman -S brightnessctl playerctl
 sudo pacman -S pipewire wireplumber
+yay -S matugen awww                  # Farben aus dem Wallpaper, Wallpaper-Daemon
 ```
 
-Optional:
-
-* waybar
-* hyprpaper
-* swaync
-
+Vollständige Listen: `packages/pkglist.txt` und `packages/aur.txt` im Repo-Wurzelverzeichnis.

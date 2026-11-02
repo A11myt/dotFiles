@@ -9,7 +9,7 @@ PanelWindow {
     required property var modelData
     screen: modelData
 
-    // QS_BAR_BOTTOM=1 → unten (zum Testen parallel zur AGS-Leiste)
+    // QS_BAR_BOTTOM=1 → unten (zum Testen neben einer laufenden Leiste)
     readonly property bool bottom: Quickshell.env("QS_BAR_BOTTOM") === "1"
     anchors { top: !bottom; bottom: bottom; left: true; right: true }
     implicitHeight: 40

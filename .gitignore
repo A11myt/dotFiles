@@ -11,8 +11,6 @@ alacritty/.config/alacritty/colors/matugen.toml
 hypr/.config/hypr/themes/matugen.conf
 hypr/.config/hypr/themes/matugen.lua
 rofi/.config/rofi/colors.rasi
-swaync/.config/swaync/colors/
-ags/.config/ags/colors.scss
 nvim/.config/nvim/lua/config/matugen_colors.lua
 tmux/.config/tmux/colors.conf
 gtk/.config/gtk-3.0/colors.css
@@ -26,9 +24,7 @@ gtk/.config/gtk-3.0/bookmarks
 # ── Von fontgen generiert ────────────────────────────────────────
 quickshell/.config/quickshell/fonts.json
 alacritty/.config/alacritty/fonts.toml
-ags/.config/ags/fonts.scss
 rofi/.config/rofi/fonts.rasi
-swaync/.config/swaync/fonts.css
 hypr/.config/hypr/themes/fonts.conf
 
 quickshell/.config/quickshell/colors.json

@@ -89,6 +89,7 @@ qalculate-gtk
 qt5-wayland
 qt5ct
 qt6ct
+quickshell
 rclone
 reflector
 restic
@@ -101,7 +102,6 @@ sassc
 slurp
 steam
 sudo
-swaync
 thunderbird
 timeshift
 tmux

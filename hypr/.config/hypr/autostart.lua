@@ -2,7 +2,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("/usr/bin/gnome-keyring-daemon --start --components=secrets,pkcs11")
     -- SSH-Key sofort laden: Passphrase aus dem Keyring (PAM-entsperrt), Fallback Zenity
     hl.exec_cmd("SSH_ASKPASS_REQUIRE=force SSH_ASKPASS=$HOME/.local/bin/ssh-askpass-keyring.sh setsid ssh-add $HOME/.ssh/id_ed25519 < /dev/null > /dev/null 2>&1")
-    -- hl.exec_cmd("swaync >> ~/.logs/swaync.log 2>&1")  -- alt
     hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")  -- Root-Rechte-Dialoge für GUI-Apps
     hl.exec_cmd("hypridle >> ~/.logs/hypridle.log 2>&1")  -- Dim/Lock/DPMS/Suspend, reagiert auf loginctl lock-session
     hl.exec_cmd("qs >> ~/.logs/quickshell.log 2>&1")   -- Oberfläche (Quickshell; AGS-Stand: git tag ags-final)

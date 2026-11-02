@@ -1,6 +1,6 @@
 # dotFiles
 
-Arch Linux · Hyprland (Lua-Config) · AGS-Bar · Matugen-Farben aus dem Wallpaper · ThinkPad T470
+Arch Linux · Hyprland (Lua-Config) · Quickshell-Oberfläche · Matugen-Farben aus dem Wallpaper · ThinkPad T470
 
 Verwaltet mit **GNU stow**: jedes Verzeichnis hier ist ein Paket, dessen Inhalt nach `$HOME` gespiegelt wird.
 `~/.config/hypr` ist z.B. ein Symlink auf `hypr/.config/hypr` in diesem Repo – Änderungen landen direkt hier.
@@ -10,9 +10,9 @@ Verwaltet mit **GNU stow**: jedes Verzeichnis hier ist ein Paket, dessen Inhalt 
 | Paket | Ziel | Inhalt |
 |---|---|---|
 | `hypr` | `~/.config/hypr` | Hyprland (Lua), hyprlock, hypridle |
-| `quickshell` | `~/.config/quickshell` | Oberfläche (Quickshell/QML): Leiste, Benachrichtigungen, Panels, OSD – Vorgänger AGS: `git checkout ags-final` |
+| `quickshell` | `~/.config/quickshell` | Oberfläche (Quickshell/QML): Leiste, Benachrichtigungen, Panels, OSD – früher AGS: `git checkout ags-final` |
 | `matugen` | `~/.config/matugen` | Farbschema-Templates, `wallpaper.sh`, Wallpaper-Picker (`SUPER+W`) |
-| `alacritty` `rofi` | `~/.config/…` | Terminal, Launcher (Benachrichtigungen und Power-Menü macht AGS) |
+| `alacritty` `rofi` | `~/.config/…` | Terminal, Launcher/Wallpaper-Picker |
 | `nvim` | `~/.config/nvim` | AstroNvim v5 |
 | `tmux` | `~/.config/tmux` | tmux-Config + Keybinds |
 | `scripts` | `~/.config/scripts` | `log.sh` – gemeinsames Logging nach `~/.logs/<tool>/` |

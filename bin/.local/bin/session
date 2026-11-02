@@ -24,9 +24,8 @@ from pathlib import Path
 
 import gi
 
-gi.require_version("AstalApps", "0.1")
 gi.require_version("Gio", "2.0")
-from gi.repository import AstalApps, Gio, GLib  # noqa: E402
+from gi.repository import Gio, GLib  # noqa: E402
 
 HOME = Path.home()
 STATE = HOME / ".local/state/session/last.json"
@@ -66,15 +65,17 @@ _apps = None
 
 
 def desktop_entry(cls: str) -> str | None:
+    """Fensterklasse → .desktop-ID (StartupWMClass oder Dateiname), über GLib."""
     global _apps
-    _apps = _apps or AstalApps.Apps()
+    _apps = _apps or Gio.AppInfo.get_all()
     key = cls.lower()
-    for a in _apps.get_list():
-        if (a.get_wm_class() or "").lower() == key:
-            return a.get_entry()
-    for a in _apps.get_list():
-        if (a.get_entry() or "").removesuffix(".desktop").lower() == key:
-            return a.get_entry()
+    for a in _apps:
+        wm = getattr(a, "get_startup_wm_class", lambda: None)()   # nur .desktop-Einträge haben eine
+        if (wm or "").lower() == key:
+            return a.get_id()
+    for a in _apps:
+        if (a.get_id() or "").removesuffix(".desktop").lower() == key:
+            return a.get_id()
     return None
 
 
@@ -171,7 +172,7 @@ def wait_new(cls: str, known: set[str], want: int) -> list[dict]:
 def restore() -> int:
     marker = RUNTIME / "session-restored"
     if marker.exists():
-        return 0   # nur einmal pro Login (z. B. nicht nach einem AGS-/Config-Neustart)
+        return 0   # nur einmal pro Login (z. B. nicht nach einem Neustart der Oberfläche)
     marker.touch()
     if not STATE.exists():
         return 0
