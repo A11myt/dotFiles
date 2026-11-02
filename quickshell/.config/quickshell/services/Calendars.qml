@@ -28,7 +28,7 @@ Singleton {
     }
     function refresh(force) {
         if (proc.running) return
-        proc.command = ["python3", "-I", Quickshell.shellDir + "/scripts/calendar.py", file].concat(force ? ["--refresh"] : [])
+        proc.command = ["python3", "-I", Quickshell.shellDir + "/scripts/ical_events.py", file].concat(force ? ["--refresh"] : [])
         proc.running = true
     }
     // Termine eines Tages (inkl. mehrtägiger Ganztagstermine)
