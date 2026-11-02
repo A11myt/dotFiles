@@ -96,14 +96,20 @@ tooltip {
         &:hover, &:hover label { color: $orange; }
 
         &.active, &.active label {
-            background: rgba(255, 106, 0, 0.75);
+            background: rgba($primary, 0.75);
             color: $on_primary;
             font-family: $font-dot;
             letter-spacing: 2px;
         }
-        &.active { background: rgba(255, 106, 0, 0.75); }
-        &.active:hover { background: rgba(255, 106, 0, 0.88); }
+        &.active { background: rgba($primary, 0.75); }
+        &.active:hover { background: rgba($primary, 0.88); }
         &.active:hover, &.active:hover label { color: $on_primary; }
+
+        // leere Arbeitsflächen leiser, belegte mit App-Icons
+        &:not(.occupied):not(.active) .num { opacity: 0.45; }
+        .appicon { font-size: 15px; }   // Icon-Größe in Astal.Icon = font-size
+        .more { font-size: 10px; color: $on_surface_variant; }
+        &.active .more { color: $on_primary; }
     }
 }
 

@@ -11,6 +11,7 @@ import OSD from "./widget/OSD"
 import QuickSettings from "./widget/QuickSettings"
 import CalendarPanel from "./widget/CalendarPanel"
 import { togglePanel } from "./widget/panels"
+import { occupiedJson } from "./widget/Workspaces"
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 
@@ -25,6 +26,7 @@ app.start({
             toggleCenter()
             return res("ok")
         }
+        if (argv[0] === "workspaces") return res(occupiedJson())
         if (argv[0] === "toggle-calendar") {
             togglePanel("calendar")
             return res("ok")
