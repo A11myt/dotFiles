@@ -9,6 +9,7 @@ import Quickshell.Bluetooth
 import qs.bar
 import qs.notifications
 import qs.osd
+import qs.panels
 import qs.services
 
 ShellRoot {
@@ -24,6 +25,10 @@ ShellRoot {
     Popups {}
     Center {}
     Osd {}
+    QuickSettings {}
+    Calendar {}
+    Clipboard {}
+    PowerMenu {}
 
     // Fernsteuerung für Tastenkombinationen: qs ipc call panels toggle center|quick|calendar|clipboard
     IpcHandler {
@@ -31,5 +36,9 @@ ShellRoot {
         function toggle(name: string): void { Panels.toggle(name) }
         function close(): void { Panels.close() }
         function open(): string { return Panels.open }
+    }
+    IpcHandler {
+        target: "power"
+        function toggle(): void { Power.toggle() }
     }
 }
