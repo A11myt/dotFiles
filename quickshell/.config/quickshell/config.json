@@ -1,26 +1,39 @@
 {
-    "bar": {},
+    "bar": {
+        "wsNumbers": false
+    },
     "feeds": [
-        {
-            "name": "tagesschau",
-            "url": "https://www.tagesschau.de/index~rss2.xml"
-        },
         {
             "name": "heise",
             "url": "https://www.heise.de/rss/heise-top-atom.xml"
+        },
+        {
+            "name": "golem",
+            "url": "https://rss.golem.de/rss.php?feed=ATOM1.0"
+        },
+        {
+            "name": "Arch Linux",
+            "url": "https://archlinux.org/feeds/news/"
         }
     ],
-    "newsCount": 6,
+    "newsCount": 5,
     "newsHidden": [
         "https://www.tagesschau.de/inland/merz-nachfolge-steinmeier-100.html",
         "https://www.tagesschau.de/ausland/amerika/trump-stores-fanshop-100.html",
-        "https://www.tagesschau.de/inland/innenpolitik/spd-rot-gruen-rot-linke-berlin-100.html"
+        "https://www.tagesschau.de/inland/innenpolitik/spd-rot-gruen-rot-linke-berlin-100.html",
+        "https://www.golem.de/news/anzeige-einhell-kompressor-nahe-prime-day-preis-und-18v-akkus-bei-amazon-guenstiger-2611-214772.html",
+        "https://www.golem.de/news/anzeige-microsoft-entra-id-hybride-strukturen-verwalten-und-absichern-2611-214721.html",
+        "https://www.heise.de/news/Merz-Google-Cloud-ausreichend-souveraen-fuer-Nachrichtendienste-11508517.html?wt_mc=rss.red.ho.top-news.atom.beitrag.beitrag",
+        "https://www.golem.de/news/pi-5-und-compute-module-raspberry-pi-kostet-mittlerweile-fast-350-euro-2611-214770.html",
+        "https://www.golem.de/news/anzeige-saugroboter-mit-wischfunktion-von-roborock-wieder-zum-tiefstpreis-bei-amazon-2611-214767.html",
+        "https://www.golem.de/news/minecraft-und-mindustry-risikoscheue-ki-agenten-entwickeln-ausgepraegte-buerokratie-2611-214769.html"
     ],
     "widgets": [
         "weather",
         "news",
         "system",
         "processes",
-        "battery"
+        "battery",
+        "media"
     ]
 }

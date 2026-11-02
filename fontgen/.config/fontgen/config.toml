@@ -9,21 +9,21 @@ ui        = "Iosevka Nerd Font Propo"
 mono      = "Iosevka Nerd Font Mono"
 accent    = "NDOT 47 (inspired by NOTHING)"
 ui_size   = 10
-mono_size = 10
+mono_size = 9
 
 [profiles.hack]
 ui        = "Hack Nerd Font Propo"
 mono      = "Hack Nerd Font Mono"
 accent    = "NDOT 47 (inspired by NOTHING)"
 ui_size   = 10
-mono_size = 10
+mono_size = 9
 
 [profiles.jetbrains]
 ui        = "JetBrainsMono Nerd Font Propo"
 mono      = "JetBrainsMono Nerd Font Mono"
 accent    = "NDOT 47 (inspired by NOTHING)"
 ui_size   = 10
-mono_size = 10
+mono_size = 9
 
 # ── Templates: erzeugte Dateien, die die Apps einbinden ─────────────────────
 [templates.alacritty]   # live_config_reload lädt Imports automatisch neu
