@@ -218,7 +218,10 @@ def schedule_deferred(image: Path, names: list[str], delay: int, token: str) -> 
 
 
 def run_deferred(token: str, delay: int, image: Path, names: list[str]) -> int:
-    os.nice(10)
+    # nur rechnen, wenn die CPU sonst nichts zu tun hat → bremst den sichtbaren Wechsel nicht
+    # (gilt auch für alle Hooks, die von hier gestartet werden)
+    os.sched_setscheduler(0, os.SCHED_IDLE, os.sched_param(0))
+    subprocess.run(["ionice", "-c", "3", "-p", str(os.getpid())], check=False)
     if delay:
         time.sleep(delay)
     # ein abgebrochener Vorgänger beendet noch seinen laufenden Hook → darauf warten,

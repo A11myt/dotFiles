@@ -238,6 +238,18 @@ def check_system(updates: bool) -> None:
                f"Kernel {lines[0]}" if running == installed
                else f"Neustart nötig: läuft {lines[0]}, installiert {installed}")
 
+    # ACPI-Interrupt-Sturm (ThinkPad T470: gpe69) frisst dauerhaft einen CPU-Thread
+    gpes = Path("/sys/firmware/acpi/interrupts")
+    if gpes.exists():
+        def counts() -> dict[str, int]:
+            return {f.name: int(f.read_text().split()[0]) for f in gpes.glob("gpe[0-9A-Fa-f]*")}
+        before = counts()
+        subprocess.run(["sleep", "1"])
+        busy = [f"{n}: {c - before.get(n, c)}/s" for n, c in counts().items() if c - before.get(n, c) > 100]
+        report("warn" if busy else "ok", "kein ACPI-Interrupt-Sturm" if not busy
+               else "ACPI-Interrupt-Sturm (kostet dauerhaft CPU) → acpi_mask_gpe=0x.. als Kernel-Parameter",
+               "\n".join(busy))
+
     rc, out = sh("systemctl --failed --no-legend --plain; systemctl --user --failed --no-legend --plain")
     report("warn" if out else "ok", "keine fehlgeschlagenen Dienste" if not out else "fehlgeschlagene Dienste", out)
 
