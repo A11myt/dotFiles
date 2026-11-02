@@ -39,6 +39,9 @@ if [[ " $* " == *" --system "* ]]; then
     sudo install -Dm644 system/greetd/hyprland-greeter.lua /etc/greetd/hyprland-greeter.lua
     sudo install -Dm644 system/pam.d/greetd                /etc/pam.d/greetd
     sudo install -Dm644 system/timeshift/timeshift.json    /etc/timeshift/timeshift.json
+    sudo install -Dm644 system/pacman/pacman.conf          /etc/pacman.conf
+    sudo install -Dm644 system/reflector/reflector.conf    /etc/xdg/reflector/reflector.conf
+    sudo systemctl enable reflector.timer paccache.timer
     sudo install -d -o "$USER" -g greeter -m 755 /var/lib/greeter-theme
     echo "   ⚠ timeshift.json enthält die UUID der alten Root-Partition → in Timeshift neu wählen"
     sudo systemctl enable greetd.service
