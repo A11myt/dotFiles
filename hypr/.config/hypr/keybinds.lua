@@ -33,6 +33,8 @@ hl.bind(mainMod .. " + W",            hl.dsp.exec_cmd("qs ipc call launcher wall
 hl.bind(mainMod .. " + slash",        hl.dsp.exec_cmd("qs ipc call cheatsheet toggle"))   -- Tastenkürzel-Übersicht
 hl.bind(mainMod .. " + B",            hl.dsp.exec_cmd("qs ipc call sidebar toggle"))   -- Info-Leiste rechts
 hl.bind(mainMod .. " + SHIFT + P",    hl.dsp.exec_cmd("qs ipc call focus toggle"))   -- Fokus-Timer starten/pausieren
+hl.bind(mainMod .. " + K",            hl.dsp.exec_cmd("qs ipc call panels toggle calendar"))   -- Kalender
+hl.bind(mainMod .. " + SHIFT + K",    hl.dsp.exec_cmd("qs ipc call calendar toggle"))   -- Kalender groß
 
 -- ── System ──
 hl.bind(mainMod .. " + l",            hl.dsp.exec_cmd("loginctl lock-session"))   -- Sperren

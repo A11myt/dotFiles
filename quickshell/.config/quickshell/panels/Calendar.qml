@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import QtQuick.Layouts
 import QtQuick.Controls
 import qs
@@ -36,6 +37,12 @@ DropPanel {
             text: root.de.toString(new Date(root.year, root.month, 1), "MMMM yyyy")
             color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx; font.bold: true
             Layout.fillWidth: true
+        }
+        Rectangle {   // große Ansicht
+            implicitWidth: 28; implicitHeight: 24; radius: 8
+            color: bigM.containsMouse ? Theme.surfaceContainerHighest : "transparent"
+            Text { anchors.centerIn: parent; text: "󰊓"; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 15 }
+            MouseArea { id: bigM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Panels.close(); Quickshell.execDetached(["qs", "ipc", "call", "calendar", "toggle"]) } }
         }
         Repeater {
             model: [{ t: "", d: -1 }, { t: "", d: 1 }]

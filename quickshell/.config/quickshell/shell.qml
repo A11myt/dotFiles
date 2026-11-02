@@ -39,6 +39,7 @@ ShellRoot {
     Cheatsheet {}
     Sidebar {}
     Lock {}
+    CalendarView {}
 
     // Fensterdaten (Klasse, Position, Größe) liefert Hyprland nur auf Anfrage →
     // bei Fenster-Ereignissen neu einlesen (gebündelt), sonst sehen Leiste und
