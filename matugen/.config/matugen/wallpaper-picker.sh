@@ -47,4 +47,5 @@ if [[ -z "$img" ]]; then
 fi
 
 log_info "selected: $img"
-wallthemes "$img" || log_error "wallthemes failed for: $img"
+# voller Pfad: Hyprland-Prozesse haben ~/.local/bin nicht zwingend im PATH
+"$HOME/.local/bin/wallthemes" "$img" || log_error "wallthemes failed for: $img"

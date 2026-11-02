@@ -132,6 +132,21 @@ def check_hyprland() -> None:
         report("fail" if out else "ok",
                "keine Config-Fehler" if not out else "hyprctl meldet Config-Fehler", out)
 
+    if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        # Keybinds laufen mit der Umgebung von Hyprland, nicht mit der der Shell
+        probe = Path(f"/tmp/dotdoctor-path-{os.getuid()}")
+        probe.unlink(missing_ok=True)
+        sh(f"hyprctl dispatch 'hl.dsp.exec_cmd(\"command -v wallthemes > {probe}\")'")
+        for _ in range(20):
+            if probe.exists() and probe.read_text().strip():
+                break
+            subprocess.run(["sleep", "0.1"])
+        found = probe.exists() and probe.read_text().strip()
+        probe.unlink(missing_ok=True)
+        report("ok" if found else "warn",
+               "Keybinds finden ~/.local/bin (wallthemes)" if found
+               else "Hyprland-PATH ohne ~/.local/bin → Keybinds finden eigene Tools nicht")
+
     lua = HOME / ".config/hypr/themes/matugen.lua"
     if shutil.which("lua"):
         rc, out = sh(f"lua -e 'dofile(\"{lua}\")'")
