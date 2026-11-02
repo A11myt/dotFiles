@@ -2,6 +2,7 @@
 
 require("envvars")
 require("autostart")
+require("monitors")   -- Arbeitsflächen 2/3 folgen externen Monitoren (Hotplug)
 require("layout")
 require("keybinds")
 require("rules")

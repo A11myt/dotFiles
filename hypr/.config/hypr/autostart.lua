@@ -11,7 +11,4 @@ hl.on("hyprland.start", function()
     hl.exec_cmd('sleep 1 && W=$(readlink -e ~/.cache/wallpaper-picker/current || echo ~/Pictures/wallpapers/TrainWallpaper.jpg); ~/.config/matugen/wallpaper.sh "$W" >> ~/.logs/awww.log 2>&1')
     -- Hyprland log symlink -> ~/.logs/hyprland.log
     hl.exec_cmd([[ln -sf "$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/hyprland.log" ~/.logs/hyprland.log]])
-    hl.exec_cmd([[sleep 1 && hyprctl dispatch 'hl.dsp.workspace.move({ workspace = 1, monitor = "eDP-1" })']])
-    hl.exec_cmd([[sleep 1 && hyprctl dispatch 'hl.dsp.workspace.move({ workspace = 2, monitor = "DP-3" })']])
-    hl.exec_cmd([[sleep 1 && hyprctl dispatch 'hl.dsp.workspace.move({ workspace = 3, monitor = "HDMI-A-2" })']])
 end)
