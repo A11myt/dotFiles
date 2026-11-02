@@ -35,6 +35,7 @@ ShellRoot {
     Settings {}
     MediaPanel {}
     Screenshot {}
+    Cheatsheet {}
 
     // Fernsteuerung für Tastenkombinationen: qs ipc call panels toggle center|quick|calendar|clipboard
     IpcHandler {
