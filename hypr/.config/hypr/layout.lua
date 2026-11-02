@@ -84,6 +84,7 @@ hl.animation({ leaf = "windows",       enabled = true,  speed = 5,    bezier = "
 hl.animation({ leaf = "fade",          enabled = true,  speed = 3,    bezier = "quick" })
 hl.animation({ leaf = "border",        enabled = true,  speed = 3,    bezier = "easeOutQuint" })
 hl.animation({ leaf = "workspaces",    enabled = true,  speed = 5,    bezier = "almostLinear", style = "fade" })
+hl.animation({ leaf = "specialWorkspace", enabled = true, speed = 4,  bezier = "easeOutQuint", style = "slidevert" })   -- Drop-down gleitet von oben
 hl.animation({ leaf = "windowsIn",     enabled = true,  speed = 4.1,  bezier = "easeOutQuint", style = "popin 87%" })
 hl.animation({ leaf = "windowsOut",    enabled = true,  speed = 1.49, bezier = "linear",        style = "popin 87%" })
 hl.animation({ leaf = "fadeIn",        enabled = true,  speed = 1.73, bezier = "almostLinear" })

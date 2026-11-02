@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Drop-down-Terminal (SUPER+`): blendet das Scratchpad-Terminal ein/aus.
+# Beim ersten Aufruf wird es gestartet; darin läuft die tmux-Sitzung "dropdown",
+# die auch ein versehentlich geschlossenes Fenster überlebt.
+if ! hyprctl clients -j | jq -e 'any(.[]; .class == "dropdown")' >/dev/null; then
+    # Regel in rules.lua legt das Fenster schwebend oben auf special:dropdown (unsichtbar)
+    hyprctl dispatch 'hl.dsp.exec_cmd("alacritty --class dropdown -e tmux new-session -A -s dropdown")' >/dev/null
+    for _ in $(seq 40); do
+        hyprctl clients -j | jq -e 'any(.[]; .class == "dropdown")' >/dev/null && break
+        sleep 0.05
+    done
+fi
+hyprctl dispatch 'hl.dsp.workspace.toggle_special("dropdown")' >/dev/null

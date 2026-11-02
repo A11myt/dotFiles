@@ -39,3 +39,13 @@ hl.window_rule({
 hl.layer_rule({ match = { namespace = "logout_dialog" },            blur = true })
 hl.layer_rule({ match = { namespace = "ags-notification-center" },  blur = true })
 hl.layer_rule({ match = { namespace = "ags-notifications" },        blur = true })
+
+-- Drop-down-Terminal (dropdown-Skript, SUPER+`): schwebend oben, auf eigenem Scratchpad
+hl.window_rule({
+    name      = "dropdown-terminal",
+    match     = { class = "^(dropdown)$" },
+    float     = true,
+    size      = "monitor_w*0.98 monitor_h*0.45",
+    move      = "monitor_w*0.01 50",
+    workspace = "special:dropdown silent",
+})
