@@ -38,6 +38,8 @@ ShellRoot {
     IpcHandler {
         target: "panels"
         function toggle(name: string): void { Panels.toggle(name) }
+        // Quick Settings auf Unterseite: qs ipc call panels page wifi|bluetooth|audio
+        function page(name: string): void { Panels.showPage(name) }
         function close(): void { Panels.close() }
         function open(): string { return Panels.open }
     }

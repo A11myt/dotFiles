@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import qs
 import qs.components
+import qs.services
 
 Pill {
     id: p
@@ -11,7 +12,7 @@ Pill {
     readonly property bool muted: sink?.audio?.muted ?? false
     PwObjectTracker { objects: [p.sink] }
 
-    onClicked: e => e.button === Qt.RightButton ? (p.sink.audio.muted = !p.muted) : Quickshell.execDetached(["pavucontrol"])
+    onClicked: e => e.button === Qt.RightButton ? (p.sink.audio.muted = !p.muted) : Panels.showPage("audio")
     onScrolled: e => { if (p.sink?.audio) p.sink.audio.volume = Math.max(0, Math.min(1, p.vol + (e.angleDelta.y > 0 ? 0.05 : -0.05))) }
     BarText {
         readonly property int v: Math.round(p.vol * 100)

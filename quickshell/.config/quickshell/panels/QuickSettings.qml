@@ -10,8 +10,10 @@ import Quickshell.Services.Mpris
 import qs
 import qs.components
 import qs.services
+import qs.panels.quick
 
-// Quick Settings (SUPER+S, ⚙): WLAN, Bluetooth, Nicht stören, Energie; Lautstärke, Helligkeit; Medien
+// Quick Settings (SUPER+S, ⚙): WLAN, Bluetooth, Nicht stören, Energie; Lautstärke, Helligkeit; Medien.
+// Pfeil an den Kacheln → Unterseiten WLAN/Bluetooth/Audio (Panels.page)
 DropPanel {
     id: root
     panel: "quick"
@@ -41,6 +43,16 @@ DropPanel {
         setBri.running = true
     }
 
+    WifiPage { visible: Panels.page === "wifi"; active: root.shown && visible; Layout.fillWidth: true }
+    BluetoothPage { visible: Panels.page === "bluetooth"; active: root.shown && visible; Layout.fillWidth: true }
+    AudioPage { visible: Panels.page === "audio"; active: root.shown && visible; Layout.fillWidth: true }
+
+    ColumnLayout {
+    id: mainPage
+    visible: Panels.page === "main"
+    Layout.fillWidth: true
+    spacing: 12
+
     GridLayout {
         Layout.fillWidth: true
         columns: 2
@@ -51,15 +63,18 @@ DropPanel {
             title: "WLAN"
             sub: root.wifiNet?.name ?? (Networking.wifiEnabled ? "Nicht verbunden" : "Aus")
             on: Networking.wifiEnabled
+            detail: true
             onClicked: Networking.wifiEnabled = !Networking.wifiEnabled
-            onRightClicked: { Panels.close(); Quickshell.execDetached(["alacritty", "-e", "nmtui"]) }
+            onDetailClicked: Panels.page = "wifi"
         }
         Tile {
             icon: "󰂯"
             title: "Bluetooth"
             sub: root.btConnected?.name ?? (root.bt?.enabled ? "An" : "Aus")
             on: root.bt?.enabled ?? false
+            detail: true
             onClicked: if (root.bt) root.bt.enabled = !root.bt.enabled
+            onDetailClicked: Panels.page = "bluetooth"
         }
         Tile {
             icon: Notifs.dnd ? "󰂛" : "󰂚"
@@ -156,7 +171,7 @@ DropPanel {
         spacing: 8
         Repeater {
             model: [
-                { label: "󰓃  Audio", wide: true, act: () => { Panels.close(); Quickshell.execDetached(["pavucontrol"]) } },
+                { label: "󰓃  Audio", wide: true, act: () => Panels.page = "audio" },
                 { label: "󰌾", wide: false, act: () => { Panels.close(); Quickshell.execDetached(["loginctl", "lock-session"]) } },
                 { label: "󰐥", wide: false, act: () => { Panels.close(); Power.toggle() } }
             ]
@@ -170,5 +185,6 @@ DropPanel {
                 MouseArea { id: bBtn; anchors.fill: parent; hoverEnabled: true; onClicked: modelData.act() }
             }
         }
+    }
     }
 }
