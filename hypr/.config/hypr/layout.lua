@@ -69,6 +69,8 @@ hl.config({
         -- trotzdem feuert und dabei das Standard-Wallpaper/Logo lädt (Log: "Launch timeout of 2000ms
         -- exceeded … Creating a texture for BGTex"). awww legt ohnehin das eigene Wallpaper darüber.
         force_default_wallpaper = 0,
+        -- stürzt der Sperrbildschirm ab, darf ein neuer übernehmen (z. B. hyprlock aus einer TTY)
+        allow_session_lock_restore = true,
         disable_hyprland_logo   = true,
     },
 })

@@ -11,6 +11,7 @@ import qs.notifications
 import qs.osd
 import qs.panels
 import qs.overview
+import qs.lock
 import qs.services
 
 ShellRoot {
@@ -37,6 +38,7 @@ ShellRoot {
     Screenshot {}
     Cheatsheet {}
     Sidebar {}
+    Lock {}
 
     // Fernsteuerung für Tastenkombinationen: qs ipc call panels toggle center|quick|calendar|clipboard
     IpcHandler {

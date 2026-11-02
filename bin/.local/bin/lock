@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Bildschirm sperren (hypridle lock_cmd, SUPER+L über loginctl lock-session):
+# Quickshell-Sperrbildschirm, wenn er bereitsteht – sonst hyprlock.
+# Wichtig: `qs ipc call` meldet auch bei unbekanntem Ziel Erfolg, daher vorher prüfen.
+if qs ipc show 2>/dev/null | grep -qx 'target lock'; then
+    qs ipc call lock lock && exit 0
+fi
+pidof hyprlock >/dev/null || exec hyprlock
