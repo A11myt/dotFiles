@@ -45,6 +45,7 @@ hypridle
 hyprland
 hyprlock
 hyprpicker
+hyprsunset
 hyprutils
 imagemagick
 jdk21-openjdk

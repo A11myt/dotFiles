@@ -1,0 +1,6 @@
+[Unit]
+Description=Nachtlicht nach Sonnenstand anwenden (nightlight)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/nightlight

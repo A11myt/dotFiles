@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""nightlight – Blaulichtfilter (hyprsunset) nach Sonnenstand.
+
+  nightlight              Stand anwenden (läuft alle 5 min über nightlight.timer)
+  nightlight on|off       von Hand an/aus – gilt bis zum nächsten Sonnenauf-/-untergang
+  nightlight toggle       an ↔ aus (von Hand)
+  nightlight auto         wieder automatisch
+  nightlight temp <K>     Farbtemperatur für die Nacht (2500–6000), wird gespeichert
+  nightlight state        Zustand als JSON (für Quickshell)
+
+Automatisch: ab 30 min vor Sonnenuntergang über 90 min wärmer, morgens ab 60 min vor
+Sonnenaufgang zurück. Sonnenzeiten und Standort wie bei `wallthemes` ([auto] in
+~/.config/matugen/wallthemes.toml), Einstellungen in [nightlight] derselben Datei.
+"""
+import sys
+sys.dont_write_bytecode = True   # wallthemes wird als Modul geladen – kein __pycache__ in ~/.local/bin
+import importlib.machinery
+import importlib.util
+import json
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+HOME = Path.home()
+STATE = HOME / ".local/state/nightlight/override"     # "on:<phase>" / "off:<phase>"
+DAY_K = 6500
+RAMP_BEFORE, RAMP_LEN = timedelta(minutes=30), timedelta(minutes=90)
+
+
+def load_wallthemes():
+    loader = importlib.machinery.SourceFileLoader("wallthemes", str(HOME / ".local/bin/wallthemes"))
+    spec = importlib.util.spec_from_loader("wallthemes", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+wt = load_wallthemes()
+
+
+def cfg() -> dict:
+    n = wt.rules().get("nightlight", {})
+    return {"enabled": bool(n.get("enabled", True)), "temp": int(n.get("temperature", 4000))}
+
+
+def sun(now: datetime):
+    a = wt.auto_cfg()
+    return wt.sun_times(now.date(), a["lat"], a["lon"])
+
+
+def auto_temp(now: datetime) -> int:
+    """Gewünschte Temperatur ohne Eingriff von Hand, mit sanftem Übergang."""
+    night = cfg()["temp"]
+    rise, set_ = sun(now)
+    ev_start = set_ - RAMP_BEFORE                       # abends wärmer werden
+    mo_start = rise - timedelta(minutes=60)             # morgens zurück
+    def lerp(a, b, t): return round(a + (b - a) * max(0.0, min(1.0, t)))
+    if ev_start <= now:
+        return lerp(DAY_K, night, (now - ev_start) / RAMP_LEN)
+    if now < mo_start:
+        return night
+    return lerp(night, DAY_K, (now - mo_start) / RAMP_LEN)
+
+
+def phase(now: datetime) -> str:
+    """Abschnitt, in dem ein Eingriff von Hand gilt (bis zum nächsten Übergang)."""
+    rise, set_ = sun(now)
+    if now >= set_ - RAMP_BEFORE:
+        return f"night-{now.date()}"
+    if now < rise:
+        return f"night-{now.date() - timedelta(days=1)}"
+    return f"day-{now.date()}"
+
+
+def override(now: datetime) -> str | None:
+    if not STATE.exists():
+        return None
+    mode, _, ph = STATE.read_text().strip().partition(":")
+    return mode if ph == phase(now) else None          # abgelaufen → automatisch
+
+
+def wanted(now: datetime) -> tuple[int, str]:
+    c = cfg()
+    ov = override(now)
+    if ov == "on":
+        return c["temp"], "on"
+    if ov == "off" or not c["enabled"]:
+        return DAY_K, "off"
+    return auto_temp(now), "auto"
+
+
+def apply_temp(k: int) -> int:
+    if not shutil.which("hyprsunset"):
+        print("nightlight: hyprsunset ist nicht installiert (sudo pacman -S hyprsunset)", file=sys.stderr)
+        return 0   # kein Fehler für systemd/dotdoctor, die Oberfläche zeigt den Hinweis
+    if subprocess.run(["pgrep", "-x", "hyprsunset"], capture_output=True).returncode != 0:
+        subprocess.Popen(["hyprsunset", "-i"], start_new_session=True, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(20):
+            if subprocess.run(["hyprctl", "hyprsunset", "identity"], capture_output=True, text=True).stdout.strip() == "ok":
+                break
+            subprocess.run(["sleep", "0.1"])
+    args = ["identity"] if k >= DAY_K else ["temperature", str(k)]
+    r = subprocess.run(["hyprctl", "hyprsunset", *args], capture_output=True, text=True)
+    return 0 if r.returncode == 0 else 1
+
+
+def set_override(mode: str | None) -> None:
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    if mode:
+        STATE.write_text(f"{mode}:{phase(datetime.now().astimezone())}")
+    else:
+        STATE.unlink(missing_ok=True)
+
+
+def state() -> int:
+    now = datetime.now().astimezone()
+    k, mode = wanted(now)
+    rise, set_ = sun(now)
+    print(json.dumps({"temp": k, "active": k < DAY_K, "mode": mode, "enabled": cfg()["enabled"],
+                      "night_temp": cfg()["temp"], "from": f"{set_ - RAMP_BEFORE:%H:%M}",
+                      "to": f"{rise:%H:%M}", "installed": bool(shutil.which("hyprsunset"))}))
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    cmd = argv[0] if argv else "apply"
+    now = datetime.now().astimezone()
+    if cmd in ("on", "off"):
+        set_override(cmd)
+    elif cmd == "toggle":
+        set_override("off" if wanted(now)[0] < DAY_K else "on")
+    elif cmd == "auto":
+        set_override(None)
+        wt.edit_rules("nightlight", "enabled", True)
+    elif cmd == "disable":
+        set_override(None)
+        wt.edit_rules("nightlight", "enabled", False)
+    elif cmd == "temp" and len(argv) == 2:
+        wt.edit_rules("nightlight", "temperature", max(2500, min(6000, int(argv[1]))))
+    elif cmd == "state":
+        return state()
+    elif cmd != "apply":
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    return apply_temp(wanted(datetime.now().astimezone())[0])
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

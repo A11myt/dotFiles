@@ -35,8 +35,17 @@ DropPanel {
     FileView { id: bri; path: "/sys/class/backlight/intel_backlight/brightness"; blockLoading: true }
     FileView { id: briMax; path: "/sys/class/backlight/intel_backlight/max_brightness"; blockLoading: true }
     function readBrightness() { bri.reload(); brightness = Number(bri.text()) / Math.max(1, Number(briMax.text())) }
-    onShownChanged: if (shown) readBrightness()
     Process { id: setBri }
+    // Nachtlicht und Hell/Dunkel: Zustand über die Werkzeuge
+    property var night: ({})
+    property var theme: ({})
+    onShownChanged: if (shown) { readBrightness(); nightState.running = true; themeState.running = true }
+    Process { id: nightState; command: [Quickshell.env("HOME") + "/.local/bin/nightlight", "state"]; stdout: StdioCollector { onStreamFinished: { try { root.night = JSON.parse(text) } catch (e) {} } } }
+    Process { id: themeState; command: [Quickshell.env("HOME") + "/.local/bin/wallthemes", "state"]; stdout: StdioCollector { onStreamFinished: { try { root.theme = JSON.parse(text) } catch (e) {} } } }
+    Process { id: nightCmd; onExited: nightState.running = true }
+    Process { id: themeCmd; onExited: themeState.running = true }
+    function nightlight(arg) { nightCmd.command = [Quickshell.env("HOME") + "/.local/bin/nightlight", arg]; nightCmd.running = true }
+
     function setBrightness(v) {
         brightness = v
         setBri.command = ["brightnessctl", "-q", "set", Math.round(v * 100) + "%"]
@@ -89,6 +98,30 @@ DropPanel {
             sub: ["Sparsam", "Ausgewogen", "Leistung"][root.profileIdx]
             on: root.profileIdx !== 1
             onClicked: PowerProfiles.profile = root.profiles[(root.profileIdx + 1) % 3]
+        }
+        Tile {
+            icon: root.night.active ? "󰖔" : "󰌶"
+            title: "Nachtlicht"
+            sub: !root.night.installed ? "hyprsunset fehlt"
+               : root.night.mode === "on" ? `An · ${root.night.temp} K`
+               : root.night.mode === "off" ? "Aus (bis Sonnenwechsel)"
+               : root.night.active ? `Automatisch · ${root.night.temp} K` : `Automatisch ab ${root.night.from ?? ""}`
+            on: (root.night.installed ?? false) && (root.night.active ?? false)
+            onClicked: { root.night = Object.assign({}, root.night, { active: !root.night.active }); root.nightlight("toggle") }
+            onRightClicked: root.nightlight("auto")
+        }
+        Tile {
+            icon: "󰔎"
+            title: root.theme.mode === "light" ? "Hell" : "Dunkel"
+            sub: root.theme.auto ? "Automatisch nach Sonne" : "Von Hand"
+            on: root.theme.mode === "light"
+            onClicked: {
+                const m = root.theme.mode === "light" ? "dark" : "light"
+                root.theme = Object.assign({}, root.theme, { mode: m })
+                themeCmd.command = [Quickshell.env("HOME") + "/.local/bin/wallthemes", "set", "mode", m]
+                themeCmd.running = true
+            }
+            onRightClicked: { Panels.close(); Quickshell.execDetached(["qs", "ipc", "call", "settings", "open", "colors"]) }
         }
     }
 

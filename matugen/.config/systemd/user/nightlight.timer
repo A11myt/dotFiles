@@ -1,0 +1,11 @@
+[Unit]
+Description=Nachtlicht alle 5 Minuten nachführen (sanfter Übergang)
+
+[Timer]
+OnStartupSec=5s
+OnCalendar=*:0/5
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

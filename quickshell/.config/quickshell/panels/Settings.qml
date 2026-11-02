@@ -39,10 +39,17 @@ PanelWindow {
     // ── Zustand der Werkzeuge ─────────────────────────────────────────────────
     property var wt: ({})          // wallthemes state
     property var fg: ({})          // fontgen state
+    property var nl: ({})          // nightlight state
     property string busy: ""       // Text, solange etwas angewendet wird
     readonly property var fontProfile: (fg.profiles ?? []).find(p => p.name === fg.profile) ?? null
 
-    function reload() { wtState.running = true; fgState.running = true }
+    function reload() { wtState.running = true; fgState.running = true; nlState.running = true }
+    Process {
+        id: nlState
+        command: [Quickshell.env("HOME") + "/.local/bin/nightlight", "state"]
+        stdout: StdioCollector { onStreamFinished: { try { win.nl = JSON.parse(text) } catch (e) {} } }
+    }
+    function nightlight(...args) { run("Nachtlicht wird angepasst …", [Quickshell.env("HOME") + "/.local/bin/nightlight", ...args]) }
     Process {
         id: wtState
         command: [Quickshell.env("HOME") + "/.local/bin/wallthemes", "state"]
@@ -238,6 +245,27 @@ PanelWindow {
                                 text: "󰖛  Automatisch"
                                 selected: win.wt.auto ?? false
                                 onClicked: win.wallthemes("auto", selected ? "off" : "on")
+                            }
+                        }
+
+                        Section {
+                            title: "Nachtlicht"
+                            sub: !win.nl.installed ? "hyprsunset ist nicht installiert: sudo pacman -S hyprsunset"
+                               : win.nl.enabled ? `Automatisch wärmer ab ${win.nl.from} Uhr bis nach Sonnenaufgang (${win.nl.to} Uhr), sanfter Übergang`
+                               : "Aus – kein Blaulichtfilter"
+                        }
+                        RowLayout {
+                            spacing: 10
+                            Chip { text: "󰖛  Automatisch"; selected: win.nl.enabled ?? false; onClicked: win.nightlight(selected ? "disable" : "auto") }
+                            Rectangle { implicitWidth: 1; implicitHeight: 22; color: Theme.outlineVariant }
+                            Repeater {
+                                model: [{ k: 3000, t: "sehr warm" }, { k: 3500, t: "warm" }, { k: 4000, t: "mittel" }, { k: 4500, t: "leicht" }, { k: 5000, t: "dezent" }]
+                                delegate: Chip {
+                                    required property var modelData
+                                    text: modelData.t
+                                    selected: win.nl.night_temp === modelData.k
+                                    onClicked: if (!selected) win.nightlight("temp", String(modelData.k))
+                                }
                             }
                         }
 
