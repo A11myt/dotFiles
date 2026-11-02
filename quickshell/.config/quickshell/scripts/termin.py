@@ -37,6 +37,8 @@ def add(data: dict) -> int:
         start = data["start"]
         end = data.get("end") or (datetime.strptime(start, "%H:%M") + timedelta(hours=1)).strftime("%H:%M")
         lines += [f"startTime: {yaml_str(start)}", f"endTime: {yaml_str(end)}"]
+    if all_day and data.get("endDate") and data["endDate"] != d.isoformat():
+        lines.append(f"endDate: {date.fromisoformat(data['endDate']).isoformat()}")   # letzter Tag (inklusive)
     if data.get("location"):
         lines.append(f"location: {yaml_str(data['location'].strip())}")
     lines += ["type: single", "tags: termin", "---", ""]

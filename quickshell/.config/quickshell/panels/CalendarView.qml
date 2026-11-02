@@ -45,7 +45,7 @@ PanelWindow {
     // ── neuer Termin ──
     function newEvent(d) {
         selected = d
-        fTitle.text = ""; fDate.text = Qt.formatDate(d, "dd.MM.yyyy"); fStart.text = ""; fEnd.text = ""; fLoc.text = ""; fNote.text = ""
+        fTitle.text = ""; fDate.text = Qt.formatDate(d, "dd.MM.yyyy"); fStart.text = ""; fEnd.text = ""; fEndDate.text = ""; fLoc.text = ""; fNote.text = ""
         fAllDay.checked = false; formError = ""
         toGoogle = true; toObsidian = false
         editing = true
@@ -59,7 +59,8 @@ PanelWindow {
         const d = ev.date.replace(/-/g, "")
         let dates
         if (ev.allDay) {
-            const n = new Date(ev.date + "T12:00:00"); n.setDate(n.getDate() + 1)
+            // Google erwartet als Ende den Tag NACH dem letzten Tag
+            const n = new Date((ev.endDate || ev.date) + "T12:00:00"); n.setDate(n.getDate() + 1)
             dates = d + "/" + Qt.formatDate(n, "yyyyMMdd")
         } else {
             const st = new Date(ev.date + "T" + ev.start + ":00")
@@ -81,6 +82,16 @@ PanelWindow {
         const y = dm[3].length === 2 ? 2000 + +dm[3] : +dm[3]
         const iso = `${y}-${dm[2].padStart(2, "0")}-${dm[1].padStart(2, "0")}`
         const ev = { title: t, date: iso, allDay: fAllDay.checked, location: fLoc.text.trim(), note: fNote.text }
+        // mehrtägig (ganztägig): „Bis“-Datum, TT.MM. reicht (Jahr wie Beginn bzw. nächstes)
+        if (fAllDay.checked && fEndDate.text.trim()) {
+            const em = fEndDate.text.trim().match(/^(\d{1,2})\.(\d{1,2})\.?(\d{2}|\d{4})?$/)
+            if (!em) { formError = "Bis-Datum bitte als TT.MM.JJJJ"; return }
+            let ey = em[3] ? (em[3].length === 2 ? 2000 + +em[3] : +em[3]) : y
+            let endIso = `${ey}-${em[2].padStart(2, "0")}-${em[1].padStart(2, "0")}`
+            if (!em[3] && endIso < iso) endIso = `${y + 1}-${em[2].padStart(2, "0")}-${em[1].padStart(2, "0")}`
+            if (endIso < iso) { formError = "Bis-Datum liegt vor dem Beginn"; return }
+            if (endIso !== iso) ev.endDate = endIso
+        }
         if (!fAllDay.checked) {
             const st = tm(fStart.text), en = fEnd.text.trim() ? tm(fEnd.text) : ""
             if (!st) { formError = "Startzeit bitte als HH:MM (oder ganztägig)"; return }
@@ -266,7 +277,12 @@ PanelWindow {
                     Text { text: "Neuer Termin"; color: Theme.fg; font.family: Theme.fontAccent; font.pixelSize: 20 }
                     Text { text: "Google: öffnet sich ausgefüllt im Browser → dort „Speichern“"; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; Layout.fillWidth: true; wrapMode: Text.WordWrap }
                     FormField { id: fTitle; label: "Titel"; placeholder: "z. B. Zahnarzt"; onAccepted: win.saveEvent() }
-                    FormField { id: fDate; label: "Datum"; placeholder: "TT.MM.JJJJ"; onAccepted: win.saveEvent() }
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        FormField { id: fDate; label: fAllDay.checked ? "Von (Datum)" : "Datum"; placeholder: "TT.MM.JJJJ"; onAccepted: win.saveEvent() }
+                        FormField { id: fEndDate; visible: fAllDay.checked; label: "Bis (Datum)"; placeholder: "optional"; onAccepted: win.saveEvent() }
+                    }
                     RowLayout {
                         Layout.fillWidth: true
                         Text { text: "Ganztägig"; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; Layout.fillWidth: true }
