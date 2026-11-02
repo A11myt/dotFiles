@@ -4,15 +4,18 @@ import Quickshell.Hyprland
 import Quickshell.Widgets
 import qs
 import qs.components
+import qs.services
 
-// Nummer + bis zu 3 App-Icons; 1–5 immer sichtbar, belegte darüber kommen dazu
+// Belegte Arbeitsflächen: ein App-Icon pro Fenster (Nummer optional, Einstellungen → Leiste),
+// leere: Nummer. 1–5 immer sichtbar, belegte darüber kommen dazu
 Pill {
     id: root
     padX: 6
     readonly property var base: [1, 2, 3, 4, 5]
-    readonly property int maxIcons: 3
+    readonly property int maxIcons: 4
+    readonly property bool numbers: Config.bar.wsNumbers === true
 
-    // Arbeitsfläche → Fensterklassen (ohne Duplikate, ohne Scratchpads)
+    // Arbeitsfläche → Fensterklassen, eine pro Fenster (ohne Scratchpads), nach Klasse gruppiert
     readonly property var occupied: {
         const m = {}
         for (const t of Hyprland.toplevels.values) {
@@ -20,9 +23,15 @@ Pill {
             const cls = t.lastIpcObject?.class ?? ""
             if (id < 1 || !cls) continue
             if (!m[id]) m[id] = []
-            if (!m[id].includes(cls)) m[id].push(cls)
+            m[id].push(cls)
         }
+        for (const k in m) m[k].sort()
         return m
+    }
+    function summary(classes) {
+        const n = {}
+        for (const c of classes) n[c] = (n[c] ?? 0) + 1
+        return Object.entries(n).map(([c, k]) => k > 1 ? `${c} ×${k}` : c).join(", ")
     }
     readonly property var ids: [...new Set([...base, ...Object.keys(occupied).map(Number)])].sort((a, b) => a - b)
 
@@ -45,7 +54,7 @@ Pill {
             readonly property var classes: root.occupied[modelData] ?? []
             readonly property bool wsHovered: wsMouse.containsMouse
 
-            implicitWidth: wsRow.implicitWidth + 20
+            implicitWidth: wsRow.implicitWidth + (ws.classes.length ? 14 : 20)
             implicitHeight: 22
             radius: 14
             color: active ? Qt.alpha(Theme.primary, wsHovered ? 0.88 : 0.75)
@@ -58,6 +67,7 @@ Pill {
                 anchors.centerIn: parent
                 spacing: 4
                 Text {
+                    visible: ws.classes.length === 0 || root.numbers
                     text: ws.modelData
                     anchors.verticalCenter: parent.verticalCenter
                     color: ws.active ? Theme.fgOnPrimary : (ws.wsHovered ? Theme.primary : Theme.fgMuted)
@@ -71,7 +81,7 @@ Pill {
                     delegate: IconImage {
                         required property string modelData
                         anchors.verticalCenter: parent.verticalCenter
-                        implicitSize: 15
+                        implicitSize: 17
                         source: root.iconFor(modelData)
                     }
                 }
@@ -84,7 +94,7 @@ Pill {
                 }
             }
             MouseArea { id: wsMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.focus(ws.modelData) }
-            Tooltip { target: ws; show: ws.wsHovered; text: ws.classes.length ? ws.classes.join(", ") : "leer" }
+            Tooltip { target: ws; show: ws.wsHovered; text: `Arbeitsfläche ${ws.modelData}: ` + (ws.classes.length ? root.summary(ws.classes) : "leer") }
         }
     }
 }

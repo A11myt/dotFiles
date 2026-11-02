@@ -455,6 +455,13 @@ PanelWindow {
                                 onToggled: on => Config.setBar(modelData, on)
                             }
                         } }
+                        Section { title: "Arbeitsflächen" }
+                        SwitchRow {
+                            title: "Nummern auch bei belegten Arbeitsflächen"
+                            sub: "Aus: nur die App-Icons der Fenster, Nummern nur bei leeren"
+                            checked: Config.bar.wsNumbers === true
+                            onToggled: on => Config.setBar("wsNumbers", on)
+                        }
                     }
 
                     // ═════════════ Schrift ═════════════
