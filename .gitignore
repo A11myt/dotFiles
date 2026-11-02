@@ -34,6 +34,7 @@ hypr/.config/hypr/themes/fonts.conf
 hypr/.config/hypr/hyprland.conf
 
 # ── Niemals committen ────────────────────────────────────────────
+backup/.config/backup/config
 *.keyring
 id_*
 *.pem

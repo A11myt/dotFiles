@@ -1,0 +1,12 @@
+[Unit]
+Description=Verschlüsseltes Backup von ~ (restic)
+# nur am Netzteil – unterwegs nicht den Akku leersaugen
+ConditionACPower=true
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/backup run
+# so wenig Einfluss auf die Arbeit wie möglich
+Nice=19
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle

@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Verschlüsseltes Backup von ~ mit restic (läuft täglich über backup.timer).
+#
+#   backup init       Ziel einrichten: Passwort erzeugen + im Schlüsselbund ablegen, Repository anlegen
+#   backup run        jetzt sichern (+ einmal pro Woche alte Stände ausdünnen)
+#   backup status     letzter Stand, Anzahl, Größe
+#   backup snapshots  alle Stände auflisten
+#   backup restore <pfad> [ziel]   Datei/Ordner aus dem letzten Stand zurückholen (Standard-Ziel: ~/restore)
+#
+# Konfiguration: ~/.config/backup/config   (RESTIC_REPOSITORY=…, SECRET_VARS=(…))
+# Ausschlüsse:   ~/.config/backup/excludes
+# Geheimnisse:   im GNOME-Schlüsselbund (secret-tool), nie in Dateien
+set -euo pipefail
+LOG_TOOL=backup source "$HOME/.config/scripts/log.sh"
+
+CONF="$HOME/.config/backup/config"
+EXCLUDES="$HOME/.config/backup/excludes"
+STAMP="$HOME/.local/state/backup"
+mkdir -p "$STAMP"
+
+die() { log_error "$*"; echo "backup: $*" >&2; notify-send -u critical -a Backup "Backup fehlgeschlagen" "$*" 2>/dev/null || true; exit 1; }
+
+secret() { secret-tool lookup backup "$1" 2>/dev/null; }
+
+load() {
+    [[ -f $CONF ]] || { echo "backup: noch nicht eingerichtet (~/.config/backup/config fehlt)"; exit 0; }
+    # shellcheck source=/dev/null
+    source "$CONF"
+    [[ -n ${RESTIC_REPOSITORY:-} ]] || die "RESTIC_REPOSITORY fehlt in $CONF"
+    export RESTIC_REPOSITORY
+    RESTIC_PASSWORD="$(secret restic-password)" || true
+    [[ -n ${RESTIC_PASSWORD:-} ]] || die "Kein restic-Passwort im Schlüsselbund (backup init)"
+    export RESTIC_PASSWORD
+    for v in "${SECRET_VARS[@]:-}"; do
+        [[ -z $v ]] && continue
+        val="$(secret "$v")" || die "Zugangsdatum $v fehlt im Schlüsselbund (secret-tool store --label=$v backup $v)"
+        export "$v=$val"
+    done
+}
+
+case "${1:-status}" in
+init)
+    [[ -f $CONF ]] || die "erst ~/.config/backup/config anlegen (siehe config.example)"
+    # shellcheck source=/dev/null
+    source "$CONF"
+    if [[ -z "$(secret restic-password)" ]]; then
+        pw="$(head -c 32 /dev/urandom | base64 | tr -d '/+=' | cut -c1-32)"
+        printf '%s' "$pw" | secret-tool store --label="restic Backup-Passwort" backup restic-password
+        echo "Backup-Passwort erzeugt und im Schlüsselbund gespeichert:"
+        echo
+        echo "    $pw"
+        echo
+        echo "WICHTIG: Dieses Passwort zusätzlich sicher notieren (Passwortmanager/Papier)."
+        echo "Ohne es lässt sich das Backup nach einem Plattendefekt NICHT entschlüsseln."
+    fi
+    for v in "${SECRET_VARS[@]:-}"; do
+        [[ -z $v || -n "$(secret "$v")" ]] && continue
+        read -rsp "Zugangsdatum $v: " val; echo
+        printf '%s' "$val" | secret-tool store --label="Backup $v" backup "$v"
+    done
+    load
+    restic cat config >/dev/null 2>&1 && echo "Repository existiert bereits." || restic init
+    ;;
+run)
+    load
+    t0=$(date +%s)
+    restic backup "$HOME" --exclude-file="$EXCLUDES" --exclude-caches --one-file-system \
+        --tag auto --host "$(hostname)" --quiet || die "restic backup (Exit $?)"
+    # einmal pro Woche: alte Stände ausdünnen (7 täglich, 4 wöchentlich, 6 monatlich)
+    if [[ ! -f $STAMP/last-prune || $(find "$STAMP/last-prune" -mtime +6) ]]; then
+        restic forget --tag auto --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune --quiet \
+            || die "restic forget/prune (Exit $?)"
+        touch "$STAMP/last-prune"
+    fi
+    date -Iseconds > "$STAMP/last-success"
+    log_info "Backup ok in $(( $(date +%s) - t0 )) s"
+    ;;
+status)
+    load
+    restic snapshots --latest 1 --compact
+    restic stats --mode raw-data --quiet | grep -E "Total Size|Snapshots" || true
+    [[ -f $STAMP/last-success ]] && echo "Letzter erfolgreicher Lauf: $(cat "$STAMP/last-success")"
+    ;;
+snapshots) load; restic snapshots --compact ;;
+restore)
+    load
+    [[ -n ${2:-} ]] || die "backup restore <pfad> [ziel]"
+    target="${3:-$HOME/restore}"
+    restic restore latest --include "$(realpath -m "$2")" --target "$target"
+    echo "Wiederhergestellt nach $target"
+    ;;
+*) sed -n '2,12p' "$0"; exit 1 ;;
+esac

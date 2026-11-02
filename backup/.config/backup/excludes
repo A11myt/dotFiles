@@ -1,0 +1,47 @@
+# restic-Ausschlüsse: alles, was sich neu herunterladen oder neu bauen lässt
+# (Muster relativ zu $HOME oder als Ordnername überall)
+
+# Caches und Paketmanager
+/home/*/.cache
+/home/*/.npm
+/home/*/.nvm
+/home/*/.local/share/pnpm
+/home/*/go/pkg
+/home/*/flutter
+/home/*/.local/share/nvim/lazy
+/home/*/.local/share/nvim/mason
+/home/*/.vscode/extensions
+/home/*/.local/share/Trash
+/home/*/.local/share/wallthemes
+/home/*/.local/share/flatpak
+/home/*/.var/app/*/cache
+
+# Spiele und große Programme (neu installierbar)
+/home/*/.local/share/Steam
+/home/*/unityhub
+/home/*/Unity/Hub/Editor
+
+# Build-Artefakte in Projekten
+node_modules
+.next
+.nuxt
+.gradle
+.dart_tool
+__pycache__
+.venv
+# allgemeine Namen nur im Projektordner (anderswo könnten sie Quellcode sein)
+/home/*/Workspace/**/target
+/home/*/Workspace/**/dist
+/home/*/Workspace/**/build
+/home/*/Unity/**/Library
+/home/*/Unity/**/Temp
+/home/*/Unity/**/Logs
+/home/*/Unity/**/obj
+
+# Browser-Profile: Cache raus, Lesezeichen/Passwörter bleiben drin
+/home/*/.mozilla/firefox/*/cache2
+/home/*/.mozilla/firefox/*/storage/default/*/cache
+
+# Laufzeit
+/home/*/.logs
+/home/*/.local/share/containers

@@ -288,6 +288,19 @@ def check_system(updates: bool) -> None:
                else "ACPI-Interrupt-Sturm (kostet dauerhaft CPU) → acpi_mask_gpe=0x.. als Kernel-Parameter",
                "\n".join(busy))
 
+    # Backup: eingerichtet und nicht älter als 3 Tage
+    if (HOME / ".config/backup/config").exists():
+        last = HOME / ".local/state/backup/last-success"
+        if not last.exists():
+            report("warn", "Backup eingerichtet, aber noch nie erfolgreich gelaufen (backup run)")
+        else:
+            age = (datetime.now().timestamp() - last.stat().st_mtime) / 86400
+            report("ok" if age < 3 else "warn",
+                   f"letztes Backup vor {age:.1f} Tagen" if age < 3
+                   else f"letztes Backup vor {age:.0f} Tagen (Timer aktiv? systemctl --user status backup.timer)")
+    else:
+        report("warn", "kein Backup von ~ eingerichtet (siehe ~/.config/backup/config.example)")
+
     # Akku-Ladegrenzen (ThinkPad): 100 % Dauerladung altert den Akku am stärksten
     bats = sorted(Path("/sys/class/power_supply").glob("BAT*"))
     if bats:

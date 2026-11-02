@@ -1,0 +1,14 @@
+# Kopieren nach ~/.config/backup/config und EIN Ziel einkommentieren, dann: backup init
+# Zugangsdaten (SECRET_VARS) fragt `backup init` ab und legt sie im Schlüsselbund ab.
+
+# Backblaze B2 (~0,006 $/GB im Monat):
+# RESTIC_REPOSITORY="b2:DEIN-BUCKET:thinkpad"
+# SECRET_VARS=(B2_ACCOUNT_ID B2_ACCOUNT_KEY)
+
+# Hetzner Storage Box (EU/DSGVO, SFTP mit SSH-Key – keine weiteren Zugangsdaten):
+# RESTIC_REPOSITORY="sftp:uXXXXXX@uXXXXXX.your-storagebox.de:23/restic-thinkpad"
+# SECRET_VARS=()
+
+# Google Drive über rclone (vorher `rclone config` → Remote "gdrive"):
+# RESTIC_REPOSITORY="rclone:gdrive:restic-thinkpad"
+# SECRET_VARS=()

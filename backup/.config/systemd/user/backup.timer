@@ -1,0 +1,11 @@
+[Unit]
+Description=Tägliches Backup von ~
+
+[Timer]
+OnCalendar=daily
+# war der Laptop aus, wird der Lauf beim nächsten Start nachgeholt
+Persistent=true
+RandomizedDelaySec=30min
+
+[Install]
+WantedBy=timers.target
