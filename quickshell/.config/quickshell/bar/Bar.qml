@@ -34,7 +34,9 @@ PanelWindow {
         anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
         spacing: 12
         Updates {}
+        Privacy {}
         Volume {}
+        BluetoothPill {}
         Battery {}
         Network {}
         PowerProfile {}

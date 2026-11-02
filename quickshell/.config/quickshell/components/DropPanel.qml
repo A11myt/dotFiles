@@ -12,6 +12,7 @@ PanelWindow {
     required property string panel           // Name in Panels.open
     property string ns: "qs-" + panel        // Layer-Namespace (Unschärfe-Regel)
     property bool alignLeft: false           // sonst rechts
+    property bool center: false              // mittig unter der Leiste
     property int panelWidth: 380
     property bool grabKeys: false            // Tastatur sofort (z. B. Suchfeld)
     default property alias content: inner.data
@@ -21,7 +22,7 @@ PanelWindow {
     onShownChanged: if (!shown) closing.restart()
     Timer { id: closing; interval: Theme.anim + 60 }
 
-    anchors { top: true; left: alignLeft; right: !alignLeft }
+    anchors { top: true; left: !center && alignLeft; right: !center && !alignLeft }
     margins { top: 6; left: 10; right: 10 }
     exclusionMode: ExclusionMode.Normal
     WlrLayershell.layer: WlrLayer.Overlay
