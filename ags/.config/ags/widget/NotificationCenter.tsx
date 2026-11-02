@@ -1,7 +1,8 @@
 import app from "ags/gtk3/app"
 import { Astal, Gdk } from "ags/gtk3"
 import { For } from "gnim"
-import { centerOpen, dnd, notifd, NotificationCard, notifications, setCenterOpen } from "./notifications"
+import { dnd, notifd, NotificationCard, notifications } from "./notifications"
+import { closePanels, isOpen } from "./panels"
 
 export default function NotificationCenter() {
     const { TOP, RIGHT, BOTTOM } = Astal.WindowAnchor
@@ -14,10 +15,10 @@ export default function NotificationCenter() {
             layer={Astal.Layer.OVERLAY}
             exclusivity={Astal.Exclusivity.NORMAL}
             keymode={Astal.Keymode.ON_DEMAND}
-            visible={centerOpen}
+            visible={isOpen("center")}
             application={app}
             onKeyPressEvent={(_, e: Gdk.Event) => {
-                if (e.get_keyval()[1] === Gdk.KEY_Escape) setCenterOpen(false)
+                if (e.get_keyval()[1] === Gdk.KEY_Escape) closePanels()
             }}
         >
             <box class="panel" vertical spacing={10}>

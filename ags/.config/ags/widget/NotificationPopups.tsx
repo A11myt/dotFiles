@@ -1,5 +1,6 @@
 import app from "ags/gtk3/app"
-import { Astal } from "ags/gtk3"
+import { Astal, Gtk } from "ags/gtk3"
+import { timeout } from "ags/time"
 import { For } from "gnim"
 import { NotificationCard, popups } from "./notifications"
 
@@ -18,7 +19,16 @@ export default function NotificationPopups() {
             application={app}
         >
             <box vertical spacing={8}>
-                <For each={popups}>{n => <NotificationCard n={n} popup />}</For>
+                <For each={popups}>{n => (
+                    <revealer
+                        transitionType={Gtk.RevealerTransitionType.SLIDE_LEFT}
+                        transitionDuration={220}
+                        revealChild={false}
+                        $={(self: Gtk.Revealer) => timeout(10, () => (self.revealChild = true))}
+                    >
+                        <NotificationCard n={n} popup />
+                    </revealer>
+                )}</For>
             </box>
         </window>
     )

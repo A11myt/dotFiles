@@ -20,6 +20,7 @@ hl.bind(mainMod .. " + E",            hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + CTRL + O",     hl.dsp.exec_cmd("flatpak run md.obsidian.Obsidian"))
 hl.bind("Insert",                     hl.dsp.exec_cmd('grim -g "$(slurp)" - | tee ~/Pictures/screenshot_$(date +%s).png | wl-copy'))
 hl.bind(mainMod .. " + A",            hl.dsp.exec_cmd("ags request -i bar toggle-center"))  -- Benachrichtigungszentrale (AGS)
+hl.bind(mainMod .. " + S",            hl.dsp.exec_cmd("ags request -i bar toggle-quick"))   -- Quick Settings (AGS)
 hl.bind(mainMod .. " + H",            hl.dsp.exec_cmd("hyprpicker -a -n -l"))
 hl.bind(mainMod .. " + W",            hl.dsp.exec_cmd("~/.config/matugen/wallpaper-picker.sh"))
 

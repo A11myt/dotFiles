@@ -241,3 +241,83 @@ tooltip {
     &.danger:hover, &.danger:focus { background: $error; border-color: $error;
         label { color: $on_error; } }
 }
+
+// ── Panels: Quick Settings, Kalender (gemeinsamer Rahmen) ──────────────────
+@mixin panel-frame {
+    margin: 10px 10px 0;
+    padding: 14px;
+    background: rgba($surface_container, 0.96);
+    border: 1px solid $outline_variant;
+    border-radius: 16px;
+}
+
+.QuickSettings .panel {
+    @include panel-frame;
+    min-width: 380px;
+
+    .tile {
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: $surface_container_high;
+        .ticon { font-size: 20px; color: $on_surface_variant; }
+        .ttitle { font-weight: bold; }
+        .tsub { font-size: 11px; color: $on_surface_variant; }
+        &:hover { background: $surface_container_highest; }
+        &.on {
+            background: $primary;
+            label, .ticon, .tsub { color: $on_primary; }
+            &:hover { background: $primary_fixed_dim; }
+        }
+    }
+
+    .sliders .sicon { font-size: 18px; min-width: 28px; color: $primary; }
+    scale {
+        trough { min-height: 8px; border-radius: 8px; background: $surface_container_highest; }
+        highlight { border-radius: 8px; background: $primary; }
+        slider { min-width: 16px; min-height: 16px; margin: -4px; border-radius: 50%; background: $on_surface; }
+    }
+
+    .media {
+        padding: 10px; border-radius: 14px; background: $surface_container_high;
+        .cover { min-width: 64px; min-height: 64px; border-radius: 10px; background-color: $surface_container_highest;
+                 background-size: cover; background-position: center; }
+        .mtitle { font-weight: bold; }
+        .martist { font-size: 12px; color: $on_surface_variant; }
+        .mbtns button { padding: 2px 10px; border-radius: 8px; font-size: 16px;
+                        &:hover { background: $primary; label { color: $on_primary; } } }
+    }
+
+    .bottom button {
+        padding: 8px 12px; border-radius: 12px; background: $surface_container_high;
+        &:hover { background: $primary; label { color: $on_primary; } }
+    }
+}
+
+.CalendarPanel .panel {
+    @include panel-frame;
+    .today { font-family: $font-dot; font-size: 14px; color: $primary; margin-bottom: 4px; }
+    calendar {
+        padding: 4px; border-radius: 10px; background: transparent; color: $on_surface;
+        &.header { color: $primary; }
+        &:selected { background: $primary; color: $on_primary; border-radius: 8px; }
+        &.button { color: $on_surface_variant; }
+        &:indeterminate { color: $outline; }
+    }
+}
+
+// ── OSD (Lautstärke/Helligkeit) ────────────────────────────────────────────
+.OSD .osd {
+    margin-bottom: 80px;
+    padding: 12px 18px;
+    background: rgba($surface_container_high, 0.95);
+    border: 1px solid $outline_variant;
+    border-radius: 18px;
+    .icon { font-size: 22px; color: $primary; }
+    .pct { font-family: $font-dot; color: $on_surface; }
+    levelbar trough { min-height: 8px; border-radius: 8px; background: $surface_container_highest; }
+    levelbar block.filled { border-radius: 8px; background: $primary; }
+    levelbar block.empty { background: transparent; }
+    &.muted .icon, &.muted .pct { color: $on_surface_variant; }
+}
+
+.QuickToggle { @include icon-pill; @include hover-orange; }

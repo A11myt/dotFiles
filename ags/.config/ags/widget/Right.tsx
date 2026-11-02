@@ -4,6 +4,7 @@ import Volume from "./Volume"
 import BatteryWidget from "./Battery"
 import NetworkWidget from "./Network"
 import PowerProfile from "./PowerProfile"
+import { togglePanel } from "./panels"
 
 export default function Right() {
     return (
@@ -13,6 +14,9 @@ export default function Right() {
             <BatteryWidget />
             <NetworkWidget />
             <PowerProfile />
+            <button class="QuickToggle" onClick={() => togglePanel("quick")} tooltipText="Quick Settings">
+                <label label="󰒓" />
+            </button>
         </box>
     )
 }

@@ -4,14 +4,14 @@ import { timeout } from "ags/time"
 import { Gtk } from "ags/gtk3"
 import Notifd from "gi://AstalNotifd"
 import GLib from "gi://GLib"
+import { togglePanel } from "./panels"
 
 export const notifd = Notifd.get_default()
 export const notifications = createBinding(notifd, "notifications")
 export const dnd = createBinding(notifd, "dont_disturb")
 
-// Zentrale: sichtbar/unsichtbar (Glocke, SUPER+A über `ags request toggle-center`)
-export const [centerOpen, setCenterOpen] = createState(false)
-export const toggleCenter = () => setCenterOpen(v => !v)
+// Zentrale: eins der Panels (Glocke, SUPER+A über `ags request toggle-center`)
+export const toggleCenter = () => togglePanel("center")
 
 // Popups: nur die frisch eingetroffenen, verschwinden nach Ablauf wieder (bleiben aber in der Zentrale)
 const POPUP_MS = 5000

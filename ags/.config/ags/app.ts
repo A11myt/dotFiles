@@ -7,6 +7,10 @@ import NotificationPopups from "./widget/NotificationPopups"
 import NotificationCenter from "./widget/NotificationCenter"
 import { toggleCenter } from "./widget/notifications"
 import PowerMenu, { togglePower } from "./widget/PowerMenu"
+import OSD from "./widget/OSD"
+import QuickSettings from "./widget/QuickSettings"
+import CalendarPanel from "./widget/CalendarPanel"
+import { togglePanel } from "./widget/panels"
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 
@@ -21,6 +25,14 @@ app.start({
             toggleCenter()
             return res("ok")
         }
+        if (argv[0] === "toggle-calendar") {
+            togglePanel("calendar")
+            return res("ok")
+        }
+        if (argv[0] === "toggle-quick") {
+            togglePanel("quick")
+            return res("ok")
+        }
         if (argv[0] === "toggle-power") {
             togglePower()
             return res("ok")
@@ -32,6 +44,9 @@ app.start({
         NotificationPopups()
         NotificationCenter()
         PowerMenu()
+        OSD()
+        QuickSettings()
+        CalendarPanel()
 
         // Matugen schreibt colors.scss, fontgen fonts.scss → CSS live neu kompilieren und anwenden.
         // Kein Neustart: Update-Check, Wetter und Widget-Zustand bleiben erhalten,
