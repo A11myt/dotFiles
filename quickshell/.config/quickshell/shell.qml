@@ -40,6 +40,18 @@ ShellRoot {
     Sidebar {}
     Lock {}
 
+    // Fensterdaten (Klasse, Position, Größe) liefert Hyprland nur auf Anfrage →
+    // bei Fenster-Ereignissen neu einlesen (gebündelt), sonst sehen Leiste und
+    // Übersicht neue/verschobene Fenster nicht
+    Timer { id: toplevelRefresh; interval: 120; onTriggered: Hyprland.refreshToplevels() }
+    Connections {
+        target: Hyprland
+        function onRawEvent(e) {
+            if (/^(openwindow|closewindow|movewindow|movewindowv2|changefloatingmode|windowtitle|windowtitlev2|fullscreen|activewindowv2)$/.test(e.name))
+                toplevelRefresh.restart()
+        }
+    }
+
     // Fernsteuerung für Tastenkombinationen: qs ipc call panels toggle center|quick|calendar|clipboard
     IpcHandler {
         target: "panels"

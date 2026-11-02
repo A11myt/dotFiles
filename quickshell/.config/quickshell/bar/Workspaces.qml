@@ -19,7 +19,8 @@ Pill {
         const m = {}
         for (const t of Hyprland.toplevels.values) {
             const id = t.workspace?.id ?? 0
-            const cls = t.lastIpcObject?.class ?? ""
+            // appId kommt sofort über Wayland, die IPC-Klasse erst nach dem Neu-Einlesen
+            const cls = t.wayland?.appId || t.lastIpcObject?.class || ""
             if (id < 1 || !cls) continue
             if (!m[id]) m[id] = []
             if (!m[id].includes(cls)) m[id].push(cls)
