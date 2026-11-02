@@ -23,3 +23,8 @@ vscode       = ["code"]
 tmux         = ["tmux: server"]
 nvim         = ["nvim", "godot"]
 folder-icons = ["nautilus"]
+
+[auto]
+enabled = true
+lat = 49.66
+lon = 9.0

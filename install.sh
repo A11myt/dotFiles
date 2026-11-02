@@ -49,6 +49,7 @@ if [[ " $* " == *" --system "* ]]; then
     sudo systemctl enable greetd.service
     systemctl --user enable --now ssh-agent.socket
     systemctl --user enable session-save.timer   # offene Programme merken (session)
+    systemctl --user enable wallthemes-auto.timer   # Hell/Dunkel nach Sonnenstand (wallthemes auto)
     systemctl --user enable backup.timer   # tägliches Backup (läuft erst, wenn ~/.config/backup/config existiert)
 fi
 

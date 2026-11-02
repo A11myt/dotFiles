@@ -217,7 +217,11 @@ PanelWindow {
                             }
                         }
 
-                        Section { title: "Modus" }
+                        Section {
+                            title: "Modus"
+                            sub: win.wt.auto ? `Automatisch: hell von ${win.wt.sunrise} bis ${win.wt.sunset} Uhr. Ein Wechsel von Hand gilt bis zum nächsten Sonnenauf-/-untergang.`
+                                             : "Automatisch wechselt nach Sonnenauf- und -untergang"
+                        }
                         RowLayout {
                             spacing: 10
                             Repeater {
@@ -228,6 +232,12 @@ PanelWindow {
                                     selected: win.wt.mode === modelData.m
                                     onClicked: if (!selected) win.wallthemes("set", "mode", modelData.m)
                                 }
+                            }
+                            Rectangle { implicitWidth: 1; implicitHeight: 22; color: Theme.outlineVariant }
+                            Chip {
+                                text: "󰖛  Automatisch"
+                                selected: win.wt.auto ?? false
+                                onClicked: win.wallthemes("auto", selected ? "off" : "on")
                             }
                         }
 

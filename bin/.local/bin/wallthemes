@@ -10,6 +10,8 @@
   wallthemes set <key> <wert>  [matugen]-Einstellung ändern (scheme, mode, source, contrast)
                                und das aktuelle Wallpaper neu einfärben
   wallthemes pick <0-3|auto>   Ausgangsfarbe für das aktuelle Wallpaper festlegen
+  wallthemes auto [on|off]     Hell/Dunkel nach Sonnenauf-/-untergang ([auto] in wallthemes.toml);
+                               ohne Argument: prüfen und bei einem Übergang umschalten (Timer)
 
 Cache: ~/.local/share/wallthemes/<bildname>/
   files/<absoluter Zielpfad>   alle gerenderten Configs (wie matugen --prefix sie ablegt)
@@ -24,6 +26,7 @@ Hooks für Apps, die gerade nicht laufen, werden still im Hintergrund nachgeholt
 (Regeln in ~/.config/matugen/wallthemes.toml).
 """
 import fcntl
+import math
 import hashlib
 import json
 import os
@@ -33,7 +36,7 @@ import sys
 import tempfile
 import time
 import tomllib
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 HOME = Path.home()
@@ -349,6 +352,61 @@ def list_cache() -> int:
     return 0
 
 
+# ── Hell/Dunkel nach Sonnenstand ─────────────────────────────────────────────
+AUTO_STATE = HOME / ".local/state/wallthemes/auto-phase"
+
+
+def sun_times(day: date, lat: float, lon: float) -> tuple[datetime, datetime]:
+    """Sonnenauf- und -untergang (lokale Zeit) nach der NOAA-Näherung, auf ~1–2 min genau."""
+    n = day.timetuple().tm_yday
+    g = 2 * math.pi / 365 * (n - 1)
+    eqt = 229.18 * (0.000075 + 0.001868 * math.cos(g) - 0.032077 * math.sin(g)
+                    - 0.014615 * math.cos(2 * g) - 0.040849 * math.sin(2 * g))
+    decl = (0.006918 - 0.399912 * math.cos(g) + 0.070257 * math.sin(g) - 0.006758 * math.cos(2 * g)
+            + 0.000907 * math.sin(2 * g) - 0.002697 * math.cos(3 * g) + 0.00148 * math.sin(3 * g))
+    phi = math.radians(lat)
+    cos_ha = math.cos(math.radians(90.833)) / (math.cos(phi) * math.cos(decl)) - math.tan(phi) * math.tan(decl)
+    ha = math.degrees(math.acos(max(-1.0, min(1.0, cos_ha))))
+    midnight = datetime(day.year, day.month, day.day, tzinfo=timezone.utc)
+    rise = midnight + timedelta(minutes=720 - 4 * (lon + ha) - eqt)
+    set_ = midnight + timedelta(minutes=720 - 4 * (lon - ha) - eqt)
+    return rise.astimezone(), set_.astimezone()
+
+
+def auto_cfg() -> dict:
+    a = rules().get("auto", {})
+    return {"enabled": bool(a.get("enabled", False)), "lat": float(a.get("lat", 49.66)), "lon": float(a.get("lon", 9.0))}
+
+
+def sun_phase(now: datetime | None = None) -> tuple[str, datetime, datetime]:
+    """(\"light\"|\"dark\", Aufgang, Untergang) für heute."""
+    a = auto_cfg()
+    now = now or datetime.now().astimezone()
+    rise, set_ = sun_times(now.date(), a["lat"], a["lon"])
+    return ("light" if rise <= now < set_ else "dark"), rise, set_
+
+
+def auto(arg: str | None) -> int:
+    if arg in ("on", "off"):
+        edit_rules("auto", "enabled", arg == "on")
+        if arg == "off":
+            return 0
+        AUTO_STATE.unlink(missing_ok=True)   # sofort passend schalten
+    a = auto_cfg()
+    if not a["enabled"]:
+        return 0
+    phase, rise, set_ = sun_phase()
+    # nur bei einem Übergang schalten → ein Wechsel von Hand gilt bis zum nächsten Auf-/Untergang
+    last = AUTO_STATE.read_text().strip() if AUTO_STATE.exists() else ""
+    AUTO_STATE.parent.mkdir(parents=True, exist_ok=True)
+    AUTO_STATE.write_text(phase)
+    if last == phase or mode() == phase:
+        return 0
+    log("INFO", f"auto: {phase} (Aufgang {rise:%H:%M}, Untergang {set_:%H:%M})")
+    edit_rules("matugen", "mode", phase)
+    return recolor()
+
+
 # ── Einstellungen (für die Quickshell-Einstellungen und die Kommandozeile) ───
 def current_image() -> Path | None:
     p = CURRENT.resolve() if CURRENT.exists() else None
@@ -400,6 +458,8 @@ def state() -> int:
         "mode": mode(),
         "source": m.get("source", "dominant"), "sources": SOURCES,
         "contrast": float(m.get("contrast", 0)),
+        "auto": auto_cfg()["enabled"],
+        "sunrise": f"{sun_phase()[1]:%H:%M}", "sunset": f"{sun_phase()[2]:%H:%M}",
         "pick": rules().get("pick", {}).get(img.name) if img else None,
         "colors": source_colors(img) if img else [],
     }))
@@ -456,6 +516,8 @@ def main(argv: list[str]) -> int:
         return pick(argv[1])
     if cmd == "recolor":
         return recolor()
+    if cmd == "auto":
+        return auto(argv[1] if len(argv) > 1 else None)
     image = Path(cmd).expanduser()
     if not image.is_file():
         log("ERROR", f"Bild nicht gefunden: {image}")

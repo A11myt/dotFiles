@@ -1,0 +1,7 @@
+[Unit]
+Description=Hell/Dunkel nach Sonnenstand (wallthemes auto)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/wallthemes auto
+Nice=10
