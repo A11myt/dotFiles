@@ -61,8 +61,11 @@ hl.config({
     },
 
     misc = {
-        force_default_wallpaper = -1,
-        disable_hyprland_logo   = false,
+        -- 0/true wie im Greeter: Hyprland 0.57 stürzt ab, wenn sein FallbackStateKeeper beim Start
+        -- trotzdem feuert und dabei das Standard-Wallpaper/Logo lädt (Log: "Launch timeout of 2000ms
+        -- exceeded … Creating a texture for BGTex"). awww legt ohnehin das eigene Wallpaper darüber.
+        force_default_wallpaper = 0,
+        disable_hyprland_logo   = true,
     },
 })
 

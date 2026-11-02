@@ -1,0 +1,14 @@
+#!/bin/sh
+# Startet Hyprland über start-hyprland und schreibt alles mit, was sonst verloren geht
+# (Konsolenausgabe von Hyprland, Meldungen des Watchdogs, Exit-Code).
+# Wird von greetd als Session-Befehl aufgerufen: agreety --cmd /home/jason/.local/bin/hypr-session
+LOG="$HOME/.logs/hypr-session/$(date +%Y-%m-%d_%H-%M-%S).log"
+mkdir -p "${LOG%/*}"
+{
+    echo "=== $(date '+%F %T') Session-Start, Uptime: $(cut -d' ' -f1 /proc/uptime) s"
+    echo "=== Kernel: $(uname -r), Hyprland: $(Hyprland --version 2>/dev/null | head -1)"
+} >> "$LOG"
+/usr/bin/start-hyprland >> "$LOG" 2>&1
+rc=$?
+echo "=== $(date '+%F %T') start-hyprland beendet, Exit-Code $rc" >> "$LOG"
+exit $rc
