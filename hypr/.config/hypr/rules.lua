@@ -50,3 +50,6 @@ hl.window_rule({
     move      = "monitor_w*0.01 50",
     workspace = "special:dropdown silent",
 })
+
+-- Quickshell-Oberfläche: Unschärfe hinter den halbtransparenten Fenstern
+hl.layer_rule({ match = { namespace = "^qs-(bar|notifications|notification-center|osd|quick-settings|calendar|clipboard|power)$" }, blur = true, ignore_alpha = 0.3 })
