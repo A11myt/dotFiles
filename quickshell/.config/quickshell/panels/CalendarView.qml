@@ -91,7 +91,7 @@ PanelWindow {
         if (toObsidian) Calendars.addEvent(ev)
         selected = new Date(y, +dm[2] - 1, +dm[1]); month = selected.getMonth(); year = selected.getFullYear()
         editing = false
-        if (toGoogle) { Qt.openUrlExternally(googleUrl(ev)); open = false }   // Browser nach vorn
+        if (toGoogle) { Quickshell.execDetached(["xdg-open", googleUrl(ev)]); open = false }   // Browser nach vorn
         else keys.forceActiveFocus()
     }
 

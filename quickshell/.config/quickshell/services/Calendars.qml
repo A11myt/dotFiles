@@ -43,7 +43,7 @@ Singleton {
         refreshLater.restart()
     }
     function openInObsidian(rel) {
-        Qt.openUrlExternally("obsidian://open?vault=Obsidian&file=" + encodeURIComponent(rel.replace(/\.md$/, "")))
+        Quickshell.execDetached(["xdg-open", "obsidian://open?vault=Obsidian&file=" + encodeURIComponent(rel.replace(/\.md$/, ""))])
     }
     Process {
         id: addProc

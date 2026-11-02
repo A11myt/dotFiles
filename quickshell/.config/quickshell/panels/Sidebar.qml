@@ -444,7 +444,7 @@ PanelWindow {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: item.modelData.link ? Qt.PointingHandCursor : Qt.ArrowCursor
-                        onClicked: if (item.modelData.link) { Qt.openUrlExternally(item.modelData.link); win.open = false }
+                        onClicked: if (item.modelData.link) { Quickshell.execDetached(["xdg-open", item.modelData.link]); win.open = false }
                     }
                     ColumnLayout {
                         id: itemCol
@@ -573,7 +573,7 @@ PanelWindow {
                             text: "• " + modelData.title
                             color: anM.containsMouse ? Theme.primary : Theme.fg
                             font.family: Theme.fontUi; font.pixelSize: 12; wrapMode: Text.WordWrap
-                            MouseArea { id: anM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Qt.openUrlExternally(modelData.link); win.open = false } }
+                            MouseArea { id: anM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["xdg-open", modelData.link]); win.open = false } }
                         }
                     }
                 }
@@ -619,7 +619,7 @@ PanelWindow {
                         Text {
                             visible: !!acc.modelData.web
                             text: "󰏌"; color: webM.containsMouse ? Theme.primary : Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 13
-                            MouseArea { id: webM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Qt.openUrlExternally(acc.modelData.web); win.open = false } }
+                            MouseArea { id: webM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["xdg-open", acc.modelData.web]); win.open = false } }
                         }
                     }
                     Small { visible: !!acc.modelData.error; text: "󰀦 " + (acc.modelData.error ?? ""); color: Theme.error }
@@ -632,7 +632,7 @@ PanelWindow {
                             implicitHeight: mailCol.implicitHeight + 12
                             radius: 8
                             color: mailM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer
-                            MouseArea { id: mailM; anchors.fill: parent; hoverEnabled: true; cursorShape: acc.modelData.web ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: if (acc.modelData.web) { Qt.openUrlExternally(acc.modelData.web); win.open = false } }
+                            MouseArea { id: mailM; anchors.fill: parent; hoverEnabled: true; cursorShape: acc.modelData.web ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: if (acc.modelData.web) { Quickshell.execDetached(["xdg-open", acc.modelData.web]); win.open = false } }
                             ColumnLayout {
                                 id: mailCol
                                 anchors { left: parent.left; right: parent.right; top: parent.top; margins: 6; leftMargin: 10; rightMargin: 10 }
@@ -677,7 +677,7 @@ PanelWindow {
                     implicitHeight: liveCol.implicitHeight + 14
                     radius: 10
                     color: liveM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer
-                    MouseArea { id: liveM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Qt.openUrlExternally("https://twitch.tv/" + modelData.login); win.open = false } }
+                    MouseArea { id: liveM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["xdg-open", "https://twitch.tv/" + modelData.login]); win.open = false } }
                     ColumnLayout {
                         id: liveCol
                         anchors { left: parent.left; right: parent.right; top: parent.top; margins: 7; leftMargin: 10; rightMargin: 10 }
@@ -706,7 +706,7 @@ PanelWindow {
                         text: "○ " + modelData.login
                         color: offM.containsMouse ? Theme.primary : Theme.outline
                         font.family: Theme.fontUi; font.pixelSize: 11
-                        MouseArea { id: offM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Qt.openUrlExternally("https://twitch.tv/" + modelData.login); win.open = false } }
+                        MouseArea { id: offM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Quickshell.execDetached(["xdg-open", "https://twitch.tv/" + modelData.login]); win.open = false } }
                     }
                 }
             }

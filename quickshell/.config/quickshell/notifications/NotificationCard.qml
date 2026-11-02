@@ -89,7 +89,7 @@ Rectangle {
                 maximumLineCount: card.popup ? 3 : 8
                 elide: Text.ElideRight
                 Layout.fillWidth: true
-                onLinkActivated: link => Qt.openUrlExternally(link)
+                onLinkActivated: link => Quickshell.execDetached(["xdg-open", link])
             }
             RowLayout {
                 visible: card.actions.length > 0

@@ -10,7 +10,7 @@ Pill {
     want: Accounts.mail.unread > 0
     onClicked: {
         const a = (Accounts.mail.accounts ?? []).find(x => x.unread > 0 && x.web)
-        if (a) Qt.openUrlExternally(a.web)
+        if (a) Quickshell.execDetached(["xdg-open", a.web])
         else Quickshell.execDetached(["qs", "ipc", "call", "sidebar", "toggle"])
     }
     BarText { text: "󰇮 " + Accounts.mail.unread; accent: p.hovered }

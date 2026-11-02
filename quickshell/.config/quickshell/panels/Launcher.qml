@@ -142,7 +142,7 @@ PanelWindow {
         }
         if (q.startsWith("g ") && q.length > 2) {              // Websuche
             const s = raw.slice(2).trim()
-            return [{ key: "web", glyph: "󰖟", title: s, sub: "Im Web suchen", run: () => Qt.openUrlExternally("https://duckduckgo.com/?q=" + encodeURIComponent(s)) }]
+            return [{ key: "web", glyph: "󰖟", title: s, sub: "Im Web suchen", run: () => Quickshell.execDetached(["xdg-open", "https://duckduckgo.com/?q=" + encodeURIComponent(s)]) }]
         }
         const out = []
         const c = calc(raw)
