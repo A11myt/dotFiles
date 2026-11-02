@@ -10,6 +10,7 @@ import qs.bar
 import qs.notifications
 import qs.osd
 import qs.panels
+import qs.overview
 import qs.services
 
 ShellRoot {
@@ -29,6 +30,7 @@ ShellRoot {
     Calendar {}
     Clipboard {}
     PowerMenu {}
+    Overview {}
 
     // Fernsteuerung für Tastenkombinationen: qs ipc call panels toggle center|quick|calendar|clipboard
     IpcHandler {
