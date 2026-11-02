@@ -6,7 +6,7 @@ set -euo pipefail
 cd "$(dirname "$(realpath "$0")")"
 REPO="$PWD"
 
-STOW_PKGS=(hypr ags alacritty nvim rofi tmux swaync matugen scripts pacman zsh git bin gtk qt fontgen backup)
+STOW_PKGS=(hypr ags alacritty nvim rofi tmux swaync matugen scripts pacman zsh git bin gtk qt fontgen backup session)
 
 log() { printf '\033[1;33m==>\033[0m %s\n' "$*"; }
 
@@ -48,6 +48,7 @@ if [[ " $* " == *" --system "* ]]; then
     echo "   ⚠ timeshift.json enthält die UUID der alten Root-Partition → in Timeshift neu wählen"
     sudo systemctl enable greetd.service
     systemctl --user enable --now ssh-agent.socket
+    systemctl --user enable session-save.timer   # offene Programme merken (session)
     systemctl --user enable backup.timer   # tägliches Backup (läuft erst, wenn ~/.config/backup/config existiert)
 fi
 

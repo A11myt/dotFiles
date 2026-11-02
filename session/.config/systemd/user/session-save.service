@@ -1,0 +1,9 @@
+[Unit]
+Description=Offene Programme merken (session save)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/session save
+Nice=19
+CPUSchedulingPolicy=idle
+IOSchedulingClass=idle

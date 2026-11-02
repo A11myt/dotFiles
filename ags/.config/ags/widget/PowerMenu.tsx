@@ -7,13 +7,14 @@ import { createState } from "gnim"
 export const [powerOpen, setPowerOpen] = createState(false)
 export const togglePower = () => setPowerOpen(v => !v)
 
-// Reihenfolge, Taste, Symbol, Text, Befehl – wie zuvor in wlogout/layout
+// Reihenfolge, Taste, Symbol, Text, Befehl – wie zuvor in wlogout/layout.
+// Vor Abmelden/Neustart/Ausschalten den Stand der offenen Programme merken (session).
 const ACTIONS = [
     { key: "l", icon: "󰌾", label: "Sperren", cmd: "loginctl lock-session" },
-    { key: "e", icon: "󰍃", label: "Abmelden", cmd: "loginctl terminate-user $USER" },
+    { key: "e", icon: "󰍃", label: "Abmelden", cmd: "~/.local/bin/session save; loginctl terminate-user $USER" },
     { key: "u", icon: "󰤄", label: "Ruhezustand", cmd: "systemctl suspend" },
-    { key: "r", icon: "󰜉", label: "Neustart", cmd: "systemctl reboot" },
-    { key: "s", icon: "󰐥", label: "Ausschalten", cmd: "systemctl poweroff" },
+    { key: "r", icon: "󰜉", label: "Neustart", cmd: "~/.local/bin/session save; systemctl reboot" },
+    { key: "s", icon: "󰐥", label: "Ausschalten", cmd: "~/.local/bin/session save; systemctl poweroff" },
 ]
 
 function run(cmd: string) {

@@ -1,0 +1,3 @@
+# Fensterklassen, die `session` weder merkt noch wiederherstellt (eine pro Zeile, Groß/klein egal).
+# Klasse eines Fensters herausfinden: hyprctl clients | grep class
+steam

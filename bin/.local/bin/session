@@ -1,0 +1,243 @@
+#!/usr/bin/env python3
+"""session – offene Programme merken und nach dem Login wiederherstellen (Hyprland).
+
+  session save      aktuellen Stand merken (läuft alle 2 min über session-save.timer)
+  session restore   gemerkten Stand wiederherstellen (einmal pro Login, aus autostart.lua)
+  session show      gemerkten Stand anzeigen
+  session clear     gemerkten Stand löschen
+
+Pro Fenster: Programm, Arbeitsfläche, bei schwebenden Fenstern Position/Größe.
+Terminals (Alacritty) starten im zuletzt genutzten Ordner, Nautilus mit seinen Ordnern.
+Andere Programme starten über ihren .desktop-Eintrag (nicht mit der alten Befehlszeile –
+Firefox würde sonst z. B. die URL wieder öffnen, mit der es gestartet wurde) und stellen
+ihre Fenster/Tabs selbst wieder her; session schiebt sie danach auf ihre Arbeitsflächen.
+
+Ignorieren: Fensterklassen zeilenweise in ~/.config/session/ignore
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime
+from pathlib import Path
+
+import gi
+
+gi.require_version("AstalApps", "0.1")
+gi.require_version("Gio", "2.0")
+from gi.repository import AstalApps, Gio, GLib  # noqa: E402
+
+HOME = Path.home()
+STATE = HOME / ".local/state/session/last.json"
+IGNORE = HOME / ".config/session/ignore"
+RUNTIME = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
+LOG = HOME / ".logs/session" / f"{datetime.now():%Y-%m-%d}.log"
+TERMINALS = {"alacritty"}
+NAUTILUS = "org.gnome.Nautilus"
+WAIT_S = 25   # so lange auf die Fenster eines Programms warten (Firefox braucht etwas)
+
+
+def log(msg: str) -> None:
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with LOG.open("a") as f:
+        f.write(f"{datetime.now():%H:%M:%S} {msg}\n")
+
+
+def hypr(*args: str) -> str:
+    return subprocess.run(["hyprctl", *args], capture_output=True, text=True).stdout
+
+
+def clients() -> list[dict]:
+    try:
+        return json.loads(hypr("clients", "-j") or "[]")
+    except json.JSONDecodeError:
+        return []
+
+
+def ignored() -> set[str]:
+    if not IGNORE.exists():
+        return set()
+    return {l.strip().lower() for l in IGNORE.read_text().splitlines() if l.strip() and not l.startswith("#")}
+
+
+# ── Programm → Startbefehl ──────────────────────────────────────────────────
+_apps = None
+
+
+def desktop_entry(cls: str) -> str | None:
+    global _apps
+    _apps = _apps or AstalApps.Apps()
+    key = cls.lower()
+    for a in _apps.get_list():
+        if (a.get_wm_class() or "").lower() == key:
+            return a.get_entry()
+    for a in _apps.get_list():
+        if (a.get_entry() or "").removesuffix(".desktop").lower() == key:
+            return a.get_entry()
+    return None
+
+
+def shell_cwd(pid: int) -> str | None:
+    """Ordner der Shell im Terminal (erstes Kind des Terminal-Prozesses)."""
+    try:
+        kids = (Path(f"/proc/{pid}/task/{pid}/children")).read_text().split()
+        for k in kids:
+            cwd = os.readlink(f"/proc/{k}/cwd")
+            if Path(cwd).is_dir():
+                return cwd
+    except OSError:
+        pass
+    return None
+
+
+def nautilus_locations() -> list[str]:
+    try:
+        bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+        res = bus.call_sync("org.freedesktop.FileManager1", "/org/freedesktop/FileManager1",
+                            "org.freedesktop.DBus.Properties", "Get",
+                            GLib.Variant("(ss)", ("org.freedesktop.FileManager1", "OpenWindowsWithLocations")),
+                            None, Gio.DBusCallFlags.NONE, 1000, None)
+        windows = res.unpack()[0]
+        return [windows[k][0] for k in sorted(windows, key=lambda p: int(p.rsplit("/", 1)[-1])) if windows[k]]
+    except GLib.Error:
+        return []
+
+
+# ── save ────────────────────────────────────────────────────────────────────
+def save() -> int:
+    skip = ignored()
+    cs = [c for c in clients() if c.get("workspace", {}).get("id", 0) > 0 and c.get("class")]
+    if not cs:
+        return 0   # nie einen guten Stand mit einem leeren überschreiben (z. B. beim Herunterfahren)
+    naut = iter(nautilus_locations())
+    entries = []
+    for c in sorted(cs, key=lambda c: (c["workspace"]["id"], c.get("focusHistoryID", 0))):
+        cls = c["class"]
+        if cls.lower() in skip:
+            continue
+        e = {"class": cls, "workspace": c["workspace"]["id"], "floating": c.get("floating", False),
+             "at": c.get("at"), "size": c.get("size"), "title": c.get("title", "")}
+        if cls.lower() in TERMINALS:
+            e["launch"] = {"type": "terminal", "cwd": shell_cwd(c["pid"]) or str(HOME)}
+        elif cls == NAUTILUS:
+            e["launch"] = {"type": "nautilus", "uri": next(naut, GLib.filename_to_uri(str(HOME)))}
+        elif (entry := desktop_entry(cls)):
+            e["launch"] = {"type": "app", "entry": entry}
+        else:
+            continue   # unbekannt, wie man es startet → lieber nicht raten
+        entries.append(e)
+    if not entries:
+        return 0
+    STATE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = STATE.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"saved": datetime.now().isoformat(timespec="seconds"), "windows": entries}, indent=1))
+    os.replace(tmp, STATE)
+    return 0
+
+
+# ── restore ─────────────────────────────────────────────────────────────────
+def dispatch(lua: str) -> None:
+    hypr("dispatch", lua)
+
+
+def place(addr: str, e: dict) -> None:
+    sel = f'window = "address:{addr}"'
+    dispatch(f'hl.dsp.window.move({{ workspace = {e["workspace"]}, {sel}, silent = true }})')
+    if e.get("floating") and e.get("size") and e.get("at"):
+        (w, h), (x, y) = e["size"], e["at"]
+        dispatch(f'hl.dsp.window.float({{ action = "enable", {sel} }})')
+        dispatch(f"hl.dsp.window.resize({{ x = {w}, y = {h}, exact = true, {sel} }})")
+        dispatch(f"hl.dsp.window.move({{ x = {x}, y = {y}, exact = true, {sel} }})")
+
+
+def launch(argv: list[str], cwd: str | None = None) -> None:
+    subprocess.Popen(argv, cwd=cwd or str(HOME), start_new_session=True,
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def wait_new(cls: str, known: set[str], want: int) -> list[dict]:
+    """Wartet auf `want` neue Fenster der Klasse (oder bis zum Timeout)."""
+    end = time.monotonic() + WAIT_S
+    found: list[dict] = []
+    while time.monotonic() < end:
+        found = [c for c in clients() if c["class"] == cls and c["address"] not in known]
+        if len(found) >= want:
+            break
+        time.sleep(0.25)
+    return found
+
+
+def restore() -> int:
+    marker = RUNTIME / "session-restored"
+    if marker.exists():
+        return 0   # nur einmal pro Login (z. B. nicht nach einem AGS-/Config-Neustart)
+    marker.touch()
+    if not STATE.exists():
+        return 0
+    state = json.loads(STATE.read_text())
+    wins = state.get("windows", [])
+    running = {c["class"] for c in clients()}
+    t0 = time.monotonic()
+
+    # nach Programm gruppieren: Apps einmal starten, Terminals/Nautilus pro Fenster
+    groups: dict[str, list[dict]] = {}
+    for e in wins:
+        groups.setdefault(e["class"], []).append(e)
+
+    restored = 0
+    for cls, es in groups.items():
+        if cls in running:
+            continue   # läuft schon (Autostart o. Ä.) – nicht doppelt starten
+        kind = es[0]["launch"]["type"]
+        known = {c["address"] for c in clients()}
+        if kind == "terminal":
+            for e in es:
+                launch(["alacritty", "--working-directory", e["launch"]["cwd"]], e["launch"]["cwd"])
+        elif kind == "nautilus":
+            launch(["nautilus", "--new-window", *[e["launch"]["uri"] for e in es]])
+        else:
+            launch(["gtk-launch", es[0]["launch"]["entry"]])
+        new = wait_new(cls, known, len(es))
+        # Reihenfolge der neuen Fenster ↔ gemerkte Reihenfolge (pro Klasse)
+        for win, e in zip(sorted(new, key=lambda c: c["address"]), es):
+            place(win["address"], e)
+            restored += 1
+        if len(new) < len(es):
+            log(f"{cls}: {len(new)}/{len(es)} Fenster erschienen")
+    log(f"Wiederhergestellt: {restored}/{len(wins)} Fenster aus Stand {state.get('saved')} "
+        f"in {time.monotonic() - t0:.1f} s")
+    return 0
+
+
+def show() -> int:
+    if not STATE.exists():
+        print("Noch nichts gemerkt.")
+        return 0
+    state = json.loads(STATE.read_text())
+    print(f"Stand vom {state['saved']}:")
+    for e in state["windows"]:
+        how = e["launch"]
+        extra = how.get("cwd") or how.get("uri") or how.get("entry")
+        fl = "  schwebend" if e.get("floating") else ""
+        print(f"  WS {e['workspace']}  {e['class']:<22} {extra}{fl}")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    cmd = argv[0] if argv else "show"
+    if cmd == "save":
+        return save()
+    if cmd == "restore":
+        return restore()
+    if cmd == "show":
+        return show()
+    if cmd == "clear":
+        STATE.unlink(missing_ok=True)
+        return 0
+    print(__doc__.strip(), file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

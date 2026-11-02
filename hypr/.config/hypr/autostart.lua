@@ -9,6 +9,8 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("awww-daemon >> ~/.logs/awww.log 2>&1")
     -- zuletzt gewähltes Wallpaper (SUPER+W), Fallback TrainWallpaper
     hl.exec_cmd('sleep 1 && W=$(readlink -e ~/.cache/wallpaper-picker/current || echo ~/Pictures/wallpapers/TrainWallpaper.jpg); ~/.config/matugen/wallpaper.sh "$W" >> ~/.logs/awww.log 2>&1')
+    -- zuletzt offene Programme wiederherstellen (einmal pro Login; nach Leiste/Wallpaper)
+    hl.exec_cmd("sleep 3 && ~/.local/bin/session restore")
     -- Hyprland log symlink -> ~/.logs/hyprland.log
     hl.exec_cmd([[ln -sf "$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/hyprland.log" ~/.logs/hyprland.log]])
 end)
