@@ -45,3 +45,5 @@ hl.window_rule({
 
 -- Quickshell-Oberfläche: Unschärfe hinter den halbtransparenten Fenstern
 hl.layer_rule({ match = { namespace = "^qs-(bar|notifications|notification-center|osd|quick-settings|calendar|clipboard|power|overview|launcher|settings|media)$" }, blur = true, ignore_alpha = 0.3 })
+-- Screenshot-Standbild sofort zeigen (keine Einblendung, sonst flackert das Bild)
+hl.layer_rule({ match = { namespace = "^qs-screenshot$" }, no_anim = true })

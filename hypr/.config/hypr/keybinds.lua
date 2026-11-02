@@ -18,7 +18,11 @@ hl.bind(mainMod .. " + D", hl.dsp.exec_cmd([[if [ "$(hyprctl getoption general:l
 hl.bind(mainMod .. " + Q",            hl.dsp.exec_cmd(terminal))
 hl.bind(mainMod .. " + E",            hl.dsp.exec_cmd(fileManager))
 hl.bind(mainMod .. " + CTRL + O",     hl.dsp.exec_cmd("flatpak run md.obsidian.Obsidian"))
-hl.bind("Insert",                     hl.dsp.exec_cmd('grim -g "$(slurp)" - | tee ~/Pictures/screenshot_$(date +%s).png | wl-copy'))
+-- Screenshots (Quickshell): Bereich (Klick = Fenster), Fenster, ganzer Bildschirm
+hl.bind("Print",                      hl.dsp.exec_cmd("qs ipc call screenshot region"))
+hl.bind("Insert",                     hl.dsp.exec_cmd("qs ipc call screenshot region"))
+hl.bind("SHIFT + Print",              hl.dsp.exec_cmd("qs ipc call screenshot window"))
+hl.bind("CTRL + Print",               hl.dsp.exec_cmd("qs ipc call screenshot screen"))
 hl.bind(mainMod .. " + A",            hl.dsp.exec_cmd("qs ipc call panels toggle center"))     -- Benachrichtigungszentrale
 hl.bind(mainMod .. " + S",            hl.dsp.exec_cmd("qs ipc call panels toggle quick"))      -- Quick Settings
 hl.bind(mainMod .. " + grave",        hl.dsp.exec_cmd("~/.local/bin/dropdown"))   -- Drop-down-Terminal (Taste links neben 1)

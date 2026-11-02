@@ -34,6 +34,7 @@ ShellRoot {
     Launcher {}
     Settings {}
     MediaPanel {}
+    Screenshot {}
 
     // Fernsteuerung für Tastenkombinationen: qs ipc call panels toggle center|quick|calendar|clipboard
     IpcHandler {

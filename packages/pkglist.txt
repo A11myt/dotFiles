@@ -98,6 +98,7 @@ ripgrep
 ristretto
 samba
 sassc
+satty
 slurp
 steam
 sudo
