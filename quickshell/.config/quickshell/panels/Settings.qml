@@ -115,6 +115,16 @@ PanelWindow {
             Keys.onEscapePressed: win.open = false
         }
 
+        // Schließen-Knopf oben rechts (immer erreichbar, auch wenn ein Eingabefeld aktiv ist)
+        Rectangle {
+            z: 10
+            anchors { top: parent.top; right: parent.right; margins: 12 }
+            width: 32; height: 32; radius: 10
+            color: closeM.containsMouse ? Qt.alpha(Theme.error, 0.2) : Theme.surfaceContainerHigh
+            Text { anchors.centerIn: parent; text: "󰅖"; color: closeM.containsMouse ? Theme.error : Theme.fg; font.family: Theme.fontUi; font.pixelSize: 16 }
+            MouseArea { id: closeM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.open = false }
+        }
+
         RowLayout {
             anchors.fill: parent
             spacing: 0
@@ -808,6 +818,7 @@ PanelWindow {
             color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12
             echoMode: fld.secret && !activeFocus ? TextInput.Password : TextInput.Normal
             onAccepted: fld.accepted()
+            Keys.onEscapePressed: win.open = false   // Esc schließt auch aus einem Feld heraus
             Text { visible: !inp.text; anchors.verticalCenter: parent.verticalCenter; text: fld.placeholder; color: Theme.fgMuted; font: inp.font }
         }
         MouseArea { anchors.fill: parent; cursorShape: Qt.IBeamCursor; onClicked: inp.forceActiveFocus(); propagateComposedEvents: true }
