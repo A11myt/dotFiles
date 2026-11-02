@@ -36,7 +36,7 @@ hl.config({
         blur = {
             enabled           = true,
             size              = 15,
-            passes            = 3,
+            passes            = 2,   -- war 3: auf der HD 520 spürbar teurer, Look fast gleich
             contrast          = 0.8,
             brightness        = 1.2,
             noise             = 0.09,
