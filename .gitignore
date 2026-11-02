@@ -12,7 +12,6 @@ hypr/.config/hypr/themes/matugen.conf
 hypr/.config/hypr/themes/matugen.lua
 rofi/.config/rofi/colors.rasi
 swaync/.config/swaync/colors/
-wlogout/.config/wlogout/styles/colors.css
 ags/.config/ags/colors.scss
 nvim/.config/nvim/lua/config/matugen_colors.lua
 tmux/.config/tmux/colors.conf

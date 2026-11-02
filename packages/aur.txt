@@ -9,5 +9,4 @@ python-pywalfox
 selectdefaultapplication-git
 timeshift-autosnap
 visual-studio-code-bin
-wlogout
 yay

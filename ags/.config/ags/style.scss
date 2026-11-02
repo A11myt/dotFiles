@@ -222,3 +222,22 @@ tooltip {
         &:hover { background: $primary; label { color: $on_primary; } }
     }
 }
+
+// ── Power-Menü (ersetzt wlogout) ───────────────────────────────────────────
+.PowerMenu .backdrop { background: rgba($scrim, 0.55); }
+.PowerMenu .action {
+    min-width: 130px;
+    padding: 22px 18px 14px;
+    background: rgba($surface_container_high, 0.95);
+    border: 1px solid $outline_variant;
+    border-radius: 18px;
+
+    .icon { font-size: 40px; color: $primary; }
+    .text { font-size: 14px; }
+    .key  { font-family: $font-dot; font-size: 12px; color: $on_surface_variant; }
+
+    &:hover, &:focus { background: $primary; border-color: $primary;
+        label { color: $on_primary; } }
+    &.danger:hover, &.danger:focus { background: $error; border-color: $error;
+        label { color: $on_error; } }
+}

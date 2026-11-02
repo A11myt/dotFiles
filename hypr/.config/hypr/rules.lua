@@ -18,7 +18,7 @@ hl.window_rule({ match = { class = "^(blueman-manager)$" }, float = true })
 
 -- opacity rules (format: "active inactive")
 hl.window_rule({ match = { class = "^(Rofi)$" },           opacity = "0.92 0.92" })
-hl.window_rule({ match = { class = "^(wlogout)$" },        opacity = "0.92 0.92" })
+hl.layer_rule({ match = { namespace = "ags-power" },                blur = true })
 hl.window_rule({ match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" }, opacity = "0.85 0.85" })
 hl.window_rule({ match = { class = "^(blueman-manager)$" },opacity = "0.88 0.88" })
 hl.window_rule({ match = { class = "^(Alacritty)$" },      opacity = "0.90 0.90" })

@@ -12,7 +12,7 @@ Verwaltet mit **GNU stow**: jedes Verzeichnis hier ist ein Paket, dessen Inhalt 
 | `hypr` | `~/.config/hypr` | Hyprland (Lua), hyprlock, hypridle |
 | `ags` | `~/.config/ags` | Statusleiste (AGS v3, TypeScript) inkl. Update-Modul |
 | `matugen` | `~/.config/matugen` | Farbschema-Templates, `wallpaper.sh`, Wallpaper-Picker (`SUPER+W`) |
-| `alacritty` `rofi` `swaync` `wlogout` | `~/.config/…` | Terminal, Launcher, Notifications, Power-Menü |
+| `alacritty` `rofi` | `~/.config/…` | Terminal, Launcher (Benachrichtigungen und Power-Menü macht AGS) |
 | `nvim` | `~/.config/nvim` | AstroNvim v5 |
 | `tmux` | `~/.config/tmux` | tmux-Config + Keybinds |
 | `scripts` | `~/.config/scripts` | `log.sh` – gemeinsames Logging nach `~/.logs/<tool>/` |

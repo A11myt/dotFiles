@@ -6,6 +6,7 @@ import Bar from "./widget/Bar"
 import NotificationPopups from "./widget/NotificationPopups"
 import NotificationCenter from "./widget/NotificationCenter"
 import { toggleCenter } from "./widget/notifications"
+import PowerMenu, { togglePower } from "./widget/PowerMenu"
 import GLib from "gi://GLib"
 import Gio from "gi://Gio"
 
@@ -14,10 +15,14 @@ const AGS_DIR = `${GLib.get_home_dir()}/.config/ags`
 app.start({
     instanceName: "bar",
     css: style,
-    // `ags request -i bar toggle-center` (SUPER+A)
+    // `ags request -i bar toggle-center` (SUPER+A), `toggle-power` (CTRL+ALT+ENTF)
     requestHandler(argv, res) {
         if (argv[0] === "toggle-center") {
             toggleCenter()
+            return res("ok")
+        }
+        if (argv[0] === "toggle-power") {
+            togglePower()
             return res("ok")
         }
         res(`unbekannt: ${argv.join(" ")}`)
@@ -26,6 +31,7 @@ app.start({
         app.get_monitors().map(Bar)
         NotificationPopups()
         NotificationCenter()
+        PowerMenu()
 
         // Matugen schreibt colors.scss, fontgen fonts.scss → CSS live neu kompilieren und anwenden.
         // Kein Neustart: Update-Check, Wetter und Widget-Zustand bleiben erhalten,

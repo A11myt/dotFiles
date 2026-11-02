@@ -25,7 +25,7 @@ hl.bind(mainMod .. " + W",            hl.dsp.exec_cmd("~/.config/matugen/wallpap
 
 -- system
 hl.bind(mainMod .. " + l",            hl.dsp.exec_cmd("loginctl lock-session"))
-hl.bind("CTRL + ALT + DELETE",        hl.dsp.exec_cmd("~/.config/hypr/scripts/wlogout.sh"))
+hl.bind("CTRL + ALT + DELETE",        hl.dsp.exec_cmd("ags request -i bar toggle-power"))  -- Power-Menü (AGS)
 
 -- move windows
 hl.bind(mainMod .. " + SHIFT + left",  hl.dsp.window.move({ direction = "left" }))
