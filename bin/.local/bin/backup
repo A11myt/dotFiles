@@ -18,7 +18,12 @@ EXCLUDES="$HOME/.config/backup/excludes"
 STAMP="$HOME/.local/state/backup"
 mkdir -p "$STAMP"
 
-die() { log_error "$*"; echo "backup: $*" >&2; notify-send -u critical -a Backup "Backup fehlgeschlagen" "$*" 2>/dev/null || true; exit 1; }
+die() {
+    log_error "$*"; echo "backup: $*" >&2
+    # Benachrichtigung nur beim unbeaufsichtigten Lauf (Timer), im Terminal reicht die Meldung
+    [[ -t 2 ]] || notify-send -u critical -a Backup "Backup fehlgeschlagen" "$*" 2>/dev/null || true
+    exit 1
+}
 
 secret() { secret-tool lookup backup "$1" 2>/dev/null; }
 
