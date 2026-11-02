@@ -7,6 +7,9 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("hypridle >> ~/.logs/hypridle.log 2>&1")  -- Dim/Lock/DPMS/Suspend, reagiert auf loginctl lock-session
     hl.exec_cmd("ags run ~/.config/ags/app.ts >> ~/.logs/ags.log 2>&1")
     hl.exec_cmd("awww-daemon >> ~/.logs/awww.log 2>&1")
+    -- Zwischenablage-Verlauf: Text und Bilder an cliphist (SUPER+SHIFT+V)
+    hl.exec_cmd("wl-paste --type text --watch cliphist store")
+    hl.exec_cmd("wl-paste --type image --watch cliphist store")
     -- zuletzt gewähltes Wallpaper (SUPER+W), Fallback TrainWallpaper
     hl.exec_cmd('sleep 1 && W=$(readlink -e ~/.cache/wallpaper-picker/current || echo ~/Pictures/wallpapers/TrainWallpaper.jpg); ~/.config/matugen/wallpaper.sh "$W" >> ~/.logs/awww.log 2>&1')
     -- zuletzt offene Programme wiederherstellen (einmal pro Login; nach Leiste/Wallpaper)

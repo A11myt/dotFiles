@@ -22,6 +22,7 @@ hl.layer_rule({ match = { namespace = "ags-power" },                blur = true 
 hl.layer_rule({ match = { namespace = "ags-quick-settings" },       blur = true })
 hl.layer_rule({ match = { namespace = "ags-calendar" },             blur = true })
 hl.layer_rule({ match = { namespace = "ags-osd" },                  blur = true })
+hl.layer_rule({ match = { namespace = "ags-clipboard" },            blur = true })
 hl.window_rule({ match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" }, opacity = "0.85 0.85" })
 hl.window_rule({ match = { class = "^(blueman-manager)$" },opacity = "0.88 0.88" })
 hl.window_rule({ match = { class = "^(Alacritty)$" },      opacity = "0.90 0.90" })

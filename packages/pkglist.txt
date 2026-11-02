@@ -12,6 +12,7 @@ bluez
 bluez-utils
 brightnessctl
 btop
+cliphist
 conky
 cpio
 cups

@@ -1,7 +1,7 @@
 // Aufklapp-Panels der Leiste: immer nur eins gleichzeitig offen
 import { createState } from "gnim"
 
-export type Panel = "none" | "center" | "quick" | "calendar"
+export type Panel = "none" | "center" | "quick" | "calendar" | "clipboard"
 
 export const [openPanel, setOpenPanel] = createState<Panel>("none")
 

@@ -22,6 +22,7 @@ hl.bind("Insert",                     hl.dsp.exec_cmd('grim -g "$(slurp)" - | te
 hl.bind(mainMod .. " + A",            hl.dsp.exec_cmd("ags request -i bar toggle-center"))  -- Benachrichtigungszentrale (AGS)
 hl.bind(mainMod .. " + S",            hl.dsp.exec_cmd("ags request -i bar toggle-quick"))   -- Quick Settings (AGS)
 hl.bind(mainMod .. " + grave",        hl.dsp.exec_cmd("~/.local/bin/dropdown"))   -- Drop-down-Terminal (Taste links neben 1)
+hl.bind(mainMod .. " + SHIFT + V",    hl.dsp.exec_cmd("ags request -i bar toggle-clipboard"))   -- Zwischenablage-Verlauf
 hl.bind(mainMod .. " + H",            hl.dsp.exec_cmd("hyprpicker -a -n -l"))
 hl.bind(mainMod .. " + W",            hl.dsp.exec_cmd("~/.config/matugen/wallpaper-picker.sh"))
 

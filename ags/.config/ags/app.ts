@@ -10,6 +10,7 @@ import PowerMenu, { togglePower } from "./widget/PowerMenu"
 import OSD from "./widget/OSD"
 import QuickSettings from "./widget/QuickSettings"
 import CalendarPanel from "./widget/CalendarPanel"
+import ClipboardPanel from "./widget/ClipboardPanel"
 import { togglePanel } from "./widget/panels"
 import { occupiedJson } from "./widget/Workspaces"
 import GLib from "gi://GLib"
@@ -27,6 +28,10 @@ app.start({
             return res("ok")
         }
         if (argv[0] === "workspaces") return res(occupiedJson())
+        if (argv[0] === "toggle-clipboard") {
+            togglePanel("clipboard")
+            return res("ok")
+        }
         if (argv[0] === "toggle-calendar") {
             togglePanel("calendar")
             return res("ok")
@@ -49,6 +54,7 @@ app.start({
         OSD()
         QuickSettings()
         CalendarPanel()
+        ClipboardPanel()
 
         // Matugen schreibt colors.scss, fontgen fonts.scss → CSS live neu kompilieren und anwenden.
         // Kein Neustart: Update-Check, Wetter und Widget-Zustand bleiben erhalten,
