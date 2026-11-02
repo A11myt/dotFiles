@@ -12,12 +12,12 @@ Singleton {
     property var f: ({})
 
     readonly property color primary: c.primary ?? "#b8c3ff"
-    readonly property color onPrimary: c.on_primary ?? "#1f2c61"
+    readonly property color fgOnPrimary: c.on_primary ?? "#1f2c61"
     readonly property color primaryContainer: c.primary_container ?? "#364479"
     readonly property color secondary: c.secondary ?? "#c3c5dd"
     readonly property color tertiary: c.tertiary ?? "#e4bad9"
     readonly property color error: c.error ?? "#ffb4ab"
-    readonly property color onError: c.on_error ?? "#690005"
+    readonly property color fgOnError: c.on_error ?? "#690005"
     readonly property color errorContainer: c.error_container ?? "#93000a"
     readonly property color surface: c.surface ?? "#121318"
     readonly property color surfaceContainerLowest: c.surface_container_lowest ?? "#0d0e13"
@@ -26,8 +26,9 @@ Singleton {
     readonly property color surfaceContainerHigh: c.surface_container_high ?? "#292a2f"
     readonly property color surfaceContainerHighest: c.surface_container_highest ?? "#34343a"
     readonly property color surfaceVariant: c.surface_variant ?? "#45464f"
-    readonly property color onSurface: c.on_surface ?? "#e3e1e9"
-    readonly property color onSurfaceVariant: c.on_surface_variant ?? "#c6c5d0"
+    // Achtung: Namen wie "onSurface" hält QML für Signal-Handler → bleiben schwarz. Daher fg*.
+    readonly property color fg: c.on_surface ?? "#e3e1e9"
+    readonly property color fgMuted: c.on_surface_variant ?? "#c6c5d0"
     readonly property color outline: c.outline ?? "#90909a"
     readonly property color outlineVariant: c.outline_variant ?? "#45464f"
     readonly property color scrim: c.scrim ?? "#000000"

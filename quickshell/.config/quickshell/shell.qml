@@ -1,19 +1,19 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Services.UPower
+import Quickshell.Services.Mpris
+import Quickshell.Networking
+import Quickshell.Bluetooth
+import qs.bar
 
-// Phase-0-Test: kleine Leiste unten mit Theme-Farben und -Schrift
 ShellRoot {
-    PanelWindow {
-        anchors { bottom: true; left: true; right: true }
-        implicitHeight: 34
-        color: Theme.surfaceContainer
+    // Dienste beim Start ansprechen – sie initialisieren sich erst beim ersten Zugriff
+    property var _init: [UPower.displayDevice, PowerProfiles.profile, Mpris.players, Bluetooth.defaultAdapter,
+                         Networking.devices, Hyprland.workspaces, Hyprland.toplevels, DesktopEntries.applications]
 
-        Text {
-            anchors.centerIn: parent
-            text: "Quickshell-Test · primary " + Theme.primary + " · " + Theme.fontUi
-            color: Theme.primary
-            font.family: Theme.fontUi
-            font.pixelSize: Theme.fontPx
-        }
+    Variants {
+        model: Quickshell.screens
+        delegate: Bar {}
     }
 }
