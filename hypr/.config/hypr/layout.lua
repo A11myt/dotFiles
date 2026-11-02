@@ -29,7 +29,7 @@ hl.config({
         shadow = {
             enabled      = true,
             range        = 12,
-            render_power = 5,
+            render_power = 4,   -- Hyprland ≥ 0.57: Maximum 4
             color        = "rgba(12121244)",
         },
 
