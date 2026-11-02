@@ -21,7 +21,7 @@ hl.config({
         rounding         = 10,
         rounding_power   = 3,
         active_opacity   = 1.0,
-        inactive_opacity = 0.98,
+        inactive_opacity = 1.0,    -- war 0.98: kaum sichtbar, erzwang aber Blur hinter jedem Fenster (dim_inactive bleibt)
         fullscreen_opacity = 1.0,
         dim_inactive     = true,
         dim_strength     = 0.05,
@@ -41,9 +41,13 @@ hl.config({
             brightness        = 1.2,
             noise             = 0.09,
             vibrancy          = 0.1696,
-            new_optimizations = false,
+            new_optimizations = true,   -- Blur cachen, solange sich dahinter nichts bewegt (Standard; war aus)
             xray              = false,
         },
+    },
+
+    render = {
+        direct_scanout = 2,   -- Vollbild-Spiele/-Videos ohne Umweg über den Compositor (2 = nur bei Spielen/Video)
     },
 
     animations = {
