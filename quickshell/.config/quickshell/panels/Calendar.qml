@@ -90,6 +90,8 @@ DropPanel {
                 readonly property bool isToday: model.today
                 readonly property bool isSel: root.sameDay(model.date, root.selected)
                 readonly property var evs: Calendars.events.length ? Calendars.on(model.date) : []
+                readonly property bool holiday: Holidays.name(model.date) !== ""
+                readonly property bool weekend: model.date.getDay() === 0 || model.date.getDay() === 6
                 implicitHeight: 32
                 radius: 8
                 color: isToday ? Theme.primary : isSel ? Theme.primaryContainer : (dayMouse.containsMouse ? Theme.surfaceContainerHighest : "transparent")
@@ -97,9 +99,10 @@ DropPanel {
                     anchors.centerIn: parent
                     anchors.verticalCenterOffset: cell.evs.length ? -3 : 0
                     text: cell.model.day
-                    color: cell.isToday ? Theme.fgOnPrimary : (cell.model.month === grid.month ? Theme.fg : Theme.outline)
+                    color: cell.isToday ? Theme.fgOnPrimary : cell.model.month !== grid.month ? Theme.outline : (cell.holiday || cell.weekend) ? Theme.tertiary : Theme.fg
                     font.family: Theme.fontUi; font.pixelSize: Theme.fontPx
-                    font.bold: cell.isToday
+                    font.bold: cell.isToday || cell.holiday
+                    font.underline: cell.holiday
                 }
                 Row {   // bis zu 3 Punkte in Kalenderfarbe
                     anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom; bottomMargin: 4 }
@@ -117,7 +120,8 @@ DropPanel {
     // ── Termine des gewählten Tages ──
     Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.outlineVariant }
     Text {
-        text: root.sameDay(root.selected, root.today) ? "Heute" : root.de.toString(root.selected, "dddd, d. MMMM")
+        text: (root.sameDay(root.selected, root.today) ? "Heute" : root.de.toString(root.selected, "dddd, d. MMMM"))
+            + (Holidays.name(root.selected) ? "  ·  " + Holidays.name(root.selected) : "")
         color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; font.bold: true
     }
     Text {

@@ -40,6 +40,8 @@ PanelWindow {
         target: "calendar"
         function toggle(): void { win.open = !win.open }
         function add(): void { win.open = true; win.newEvent(win.selected) }
+        // Monat anzeigen, z. B. qs ipc call calendar month 2026 12 („show“ ist bei qs ipc schon belegt)
+        function month(y: int, m: int): void { win.open = true; win.year = y; win.month = m - 1; win.selected = new Date(y, m - 1, 1) }
     }
 
     // ── neuer Termin ──
@@ -119,6 +121,35 @@ PanelWindow {
     }
     readonly property var dayEvents: Calendars.on(selected)
 
+    // mehrtägig = ganztägig über mehr als einen Tag oder mindestens 24 h
+    function isMulti(e) { return e.end - e.start > 86400 + 3600 || (e.allDay && e.end - e.start > 90000) }
+    function dayIdx(t) {   // Kachel-Index (0–41) des Tages, in dem Zeitpunkt t (s) liegt
+        const d = new Date(t * 1000); d.setHours(12, 0, 0, 0)
+        const c0 = new Date(cells[0]); c0.setHours(12, 0, 0, 0)
+        return Math.round((d - c0) / 86400000)
+    }
+    // Balkenstücke: { row, c0, c1, lane, first, last, ev } und Spuren pro Woche
+    readonly property var barLayout: {
+        const multi = Calendars.events.filter(e => isMulti(e)).sort((a, b) => a.start - b.start || b.end - a.end)
+        const out = [], lanes = [[], [], [], [], [], []], count = [0, 0, 0, 0, 0, 0]
+        for (const ev of multi) {
+            const s = dayIdx(ev.start), e = dayIdx(ev.end - 1)
+            if (e < 0 || s > 41) continue
+            for (let row = Math.max(0, Math.floor(s / 7)); row <= Math.min(5, Math.floor(e / 7)); row++) {
+                const c0 = Math.max(s, row * 7) - row * 7, c1 = Math.min(e, row * 7 + 6) - row * 7
+                let lane = 0
+                while ((lanes[row][lane] ?? []).some(([a, b]) => !(c1 < a || c0 > b))) lane++
+                if (!lanes[row][lane]) lanes[row][lane] = []
+                lanes[row][lane].push([c0, c1])
+                count[row] = Math.max(count[row], lane + 1)
+                out.push({ row, c0, c1, lane, first: s >= row * 7, last: e <= row * 7 + 6, ev })
+            }
+        }
+        return { bars: out, lanes: count }
+    }
+    readonly property var bars: barLayout.bars
+    readonly property var lanesPerRow: barLayout.lanes
+
     Rectangle {
         anchors.fill: parent
         radius: 20
@@ -191,72 +222,130 @@ PanelWindow {
                     }
                 }
 
-                // Wochentage
+                // Wochentage (Wochenende farbig)
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 6
                     Repeater {
                         model: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-                        delegate: Text { required property string modelData; Layout.fillWidth: true; Layout.preferredWidth: 1; text: modelData; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12; horizontalAlignment: Text.AlignHCenter }
+                        delegate: Text { required property string modelData; required property int index; Layout.fillWidth: true; Layout.preferredWidth: 1; text: modelData; color: index >= 5 ? Theme.tertiary : Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: index >= 5; horizontalAlignment: Text.AlignHCenter }
                     }
                 }
 
-                GridLayout {
-                    id: grid
+                Item {
+                    id: gridArea
                     Layout.fillWidth: true
                     Layout.fillHeight: true
-                    columns: 7
-                    rowSpacing: 6; columnSpacing: 6
-                    Repeater {
-                        model: win.cells
-                        delegate: Rectangle {
-                            id: cell
-                            required property var modelData
-                            readonly property date d: modelData
-                            readonly property bool inMonth: d.getMonth() === win.month
-                            readonly property bool isToday: win.sameDay(d, win.today)
-                            readonly property bool isSel: win.sameDay(d, win.selected)
-                            readonly property var evs: Calendars.events.length ? Calendars.on(d) : []
-                            readonly property int fits: Math.max(0, Math.floor((height - 30) / 19))
-                            Layout.fillWidth: true; Layout.fillHeight: true
-                            Layout.preferredWidth: 1; Layout.preferredHeight: 1
-                            radius: 10
-                            color: isSel ? Qt.alpha(Theme.primary, 0.16) : (cellM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainerHigh)
-                            border.width: isSel ? 1 : 0
-                            border.color: Theme.primary
-                            opacity: inMonth ? 1 : 0.45
-                            MouseArea { id: cellM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { win.selected = cell.d; win.editing = false } onDoubleClicked: win.newEvent(cell.d) }
+                    readonly property real gap: 6
+                    readonly property real cw: (width - 6 * gap) / 7
+                    readonly property real ch: (height - 5 * gap) / 6
 
-                            Rectangle {
-                                x: 6; y: 5
-                                implicitWidth: Math.max(22, dayNum.implicitWidth + 10); implicitHeight: 22; radius: 11
-                                color: cell.isToday ? Theme.primary : "transparent"
-                                Text { id: dayNum; anchors.centerIn: parent; text: cell.d.getDate(); color: cell.isToday ? Theme.fgOnPrimary : Theme.fg; font.family: Theme.fontUi; font.pixelSize: 13; font.bold: cell.isToday }
-                            }
-                            Column {
-                                anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: 30; leftMargin: 5; rightMargin: 5 }
-                                spacing: 2
-                                Repeater {
-                                    model: cell.evs.slice(0, cell.evs.length > cell.fits ? Math.max(0, cell.fits - 1) : cell.fits)
-                                    delegate: Rectangle {
-                                        required property var modelData
-                                        readonly property color c: Calendars.colorOf(modelData.cal)
-                                        width: parent.width; height: 17; radius: 5
-                                        color: modelData.allDay ? Qt.alpha(c, 0.35) : "transparent"
-                                        Rectangle { visible: !parent.modelData.allDay; width: 3; height: parent.height - 4; anchors.verticalCenter: parent.verticalCenter; radius: 2; color: parent.c }
-                                        Text {
-                                            anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 6; rightMargin: 3 }
-                                            text: (parent.modelData.allDay ? "" : win.hm(parent.modelData.start) + " ") + parent.modelData.title
-                                            color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 11; elide: Text.ElideRight
-                                        }
+                    GridLayout {
+                        id: grid
+                        anchors.fill: parent
+                        columns: 7
+                        rowSpacing: gridArea.gap; columnSpacing: gridArea.gap
+                        Repeater {
+                            model: win.cells
+                            delegate: Rectangle {
+                                id: cell
+                                required property var modelData
+                                required property int index
+                                readonly property date d: modelData
+                                readonly property int row: Math.floor(index / 7)
+                                readonly property bool inMonth: d.getMonth() === win.month
+                                readonly property bool isToday: win.sameDay(d, win.today)
+                                readonly property bool isSel: win.sameDay(d, win.selected)
+                                readonly property bool weekend: index % 7 >= 5
+                                readonly property string holiday: Holidays.name(d)
+                                readonly property string special: Holidays.special(d)
+                                // mehrtägige Termine liegen als Balken darüber → hier nur die übrigen
+                                readonly property var evs: Calendars.events.length ? Calendars.on(d).filter(e => !win.isMulti(e)) : []
+                                readonly property int lanes: win.lanesPerRow[row] ?? 0
+                                readonly property real listTop: 30 + lanes * 19
+                                readonly property int fits: Math.max(0, Math.floor((height - listTop) / 19))
+                                readonly property color base: holiday ? Qt.tint(Theme.surfaceContainerHigh, Qt.alpha(Theme.tertiary, 0.20))
+                                                            : weekend ? Qt.tint(Theme.surfaceContainerHigh, Qt.alpha(Theme.secondary, 0.09))
+                                                            : Theme.surfaceContainerHigh
+                                Layout.fillWidth: true; Layout.fillHeight: true
+                                Layout.preferredWidth: 1; Layout.preferredHeight: 1
+                                radius: 10
+                                color: isSel ? Qt.alpha(Theme.primary, 0.16) : (cellM.containsMouse ? Theme.surfaceContainerHighest : base)
+                                border.width: isSel ? 1 : 0
+                                border.color: Theme.primary
+                                opacity: inMonth ? 1 : 0.45
+                                MouseArea { id: cellM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { win.selected = cell.d; win.editing = false } onDoubleClicked: win.newEvent(cell.d) }
+
+                                Rectangle {
+                                    id: dayBadge
+                                    x: 6; y: 5
+                                    implicitWidth: Math.max(22, dayNum.implicitWidth + 10); implicitHeight: 22; radius: 11
+                                    color: cell.isToday ? Theme.primary : "transparent"
+                                    Text {
+                                        id: dayNum; anchors.centerIn: parent; text: cell.d.getDate()
+                                        color: cell.isToday ? Theme.fgOnPrimary : (cell.holiday || cell.weekend) ? Theme.tertiary : Theme.fg
+                                        font.family: Theme.fontUi; font.pixelSize: 13; font.bold: cell.isToday || cell.holiday !== ""
                                     }
                                 }
-                                Text {
-                                    visible: cell.evs.length > cell.fits
-                                    text: "+" + (cell.evs.length - Math.max(0, cell.fits - 1)) + " weitere"
-                                    color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 10
+                                Text {   // Feiertag / Heiligabend / Silvester
+                                    visible: text !== ""
+                                    anchors { left: dayBadge.right; leftMargin: 4; right: parent.right; rightMargin: 6; verticalCenter: dayBadge.verticalCenter }
+                                    text: cell.holiday || cell.special
+                                    color: cell.holiday ? Theme.tertiary : Theme.fgMuted
+                                    font.family: Theme.fontUi; font.pixelSize: 10; font.italic: !cell.holiday
+                                    elide: Text.ElideRight; horizontalAlignment: Text.AlignRight
+                                }
+                                Column {
+                                    anchors { left: parent.left; right: parent.right; top: parent.top; topMargin: cell.listTop; leftMargin: 5; rightMargin: 5 }
+                                    spacing: 2
+                                    Repeater {
+                                        model: cell.evs.slice(0, cell.evs.length > cell.fits ? Math.max(0, cell.fits - 1) : cell.fits)
+                                        delegate: Rectangle {
+                                            required property var modelData
+                                            readonly property color c: Calendars.colorOf(modelData.cal)
+                                            width: parent.width; height: 17; radius: 5
+                                            color: modelData.allDay ? Qt.alpha(c, 0.35) : "transparent"
+                                            Rectangle { visible: !parent.modelData.allDay; width: 3; height: parent.height - 4; anchors.verticalCenter: parent.verticalCenter; radius: 2; color: parent.c }
+                                            Text {
+                                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 6; rightMargin: 3 }
+                                                text: (parent.modelData.allDay ? "" : win.hm(parent.modelData.start) + " ") + parent.modelData.title
+                                                color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 11; elide: Text.ElideRight
+                                            }
+                                        }
+                                    }
+                                    Text {
+                                        visible: cell.evs.length > cell.fits
+                                        text: "+" + (cell.evs.length - Math.max(0, cell.fits - 1)) + " weitere"
+                                        color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 10
+                                    }
                                 }
                             }
+                        }
+                    }
+
+                    // Mehrtägige Termine als durchgehende Balken über die Kacheln (pro Woche ein Stück)
+                    Repeater {
+                        model: win.bars
+                        delegate: Rectangle {
+                            id: bar
+                            required property var modelData
+                            readonly property color c: Calendars.colorOf(modelData.ev.cal)
+                            x: modelData.c0 * (gridArea.cw + gridArea.gap) + 4
+                            y: modelData.row * (gridArea.ch + gridArea.gap) + 30 + modelData.lane * 19
+                            width: (modelData.c1 - modelData.c0) * (gridArea.cw + gridArea.gap) + gridArea.cw - 8
+                            height: 17
+                            radius: 5
+                            // deckend (getönt), sonst addieren sich die Eck-Flächen sichtbar
+                            color: Qt.tint(Theme.surfaceContainerHigh, Qt.alpha(c, barM.containsMouse ? 0.75 : 0.55))
+                            // eckig, wo der Balken in die Nachbarwoche weiterläuft
+                            Rectangle { visible: !bar.modelData.first; anchors { left: parent.left; top: parent.top; bottom: parent.bottom } width: 6; color: parent.color }
+                            Rectangle { visible: !bar.modelData.last; anchors { right: parent.right; top: parent.top; bottom: parent.bottom } width: 6; color: parent.color }
+                            Text {
+                                anchors { left: parent.left; right: parent.right; verticalCenter: parent.verticalCenter; leftMargin: 7; rightMargin: 5 }
+                                text: (bar.modelData.first ? "" : "… ") + bar.modelData.ev.title + (bar.modelData.last && bar.modelData.first ? "" : bar.modelData.last ? "" : "  →")
+                                color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 11; font.bold: true; elide: Text.ElideRight
+                            }
+                            MouseArea { id: barM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { win.selected = new Date(Math.max(bar.modelData.ev.start * 1000, win.cells[bar.modelData.row * 7].getTime())); win.editing = false } }
                         }
                     }
                 }
@@ -358,6 +447,7 @@ PanelWindow {
                     spacing: 10
                     Text { text: win.selected.toLocaleDateString(win.de, "dddd"); color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 13; font.bold: true }
                     Text { text: win.selected.toLocaleDateString(win.de, "d. MMMM yyyy"); color: Theme.fg; font.family: Theme.fontAccent; font.pixelSize: 22 }
+                    Text { visible: text !== ""; text: Holidays.name(win.selected) ? "󰃰 " + Holidays.name(win.selected) : Holidays.special(win.selected); color: Theme.tertiary; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: true }
                     Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: Theme.outlineVariant }
                     Text {
                         visible: Calendars.calendars.length === 0

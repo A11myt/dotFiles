@@ -571,6 +571,20 @@ PanelWindow {
                             text: "Nicht erreichbar: " + Calendars.errors.map(e => e.cal + " (" + e.error + ")").join(", ")
                             color: Theme.error; font.family: Theme.fontUi; font.pixelSize: 12
                         }
+                        Section { title: "Feiertage"; sub: "Gesetzliche Feiertage im Kalender markieren – für dein Bundesland" }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 6
+                            Repeater {
+                                model: Object.keys(Holidays.states)
+                                delegate: Chip {
+                                    required property string modelData
+                                    text: Holidays.states[modelData]
+                                    selected: Config.holidayState === modelData
+                                    onClicked: Config.set("holidayState", modelData)
+                                }
+                            }
+                        }
                         Text {
                             visible: Calendars.calendars.length > 0
                             text: Calendars.loading ? "Lade Termine …" : Calendars.events.length + " Termine geladen (5 Wochen zurück bis 10 Wochen voraus)"

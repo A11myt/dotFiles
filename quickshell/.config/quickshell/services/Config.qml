@@ -42,6 +42,7 @@ Singleton {
     readonly property alias bar: data.bar
     readonly property alias focus: data.focus
     readonly property alias twitch: data.twitch
+    readonly property alias holidayState: data.holidayState
 
     // alle bekannten Dashboard-Widgets (Reihenfolge = Vorschlag beim Hinzufügen)
     readonly property var widgetInfo: ({
@@ -93,6 +94,7 @@ Singleton {
             // Fokus-Timer: Minuten, lange Pause nach n Runden, „Nicht stören“ während Fokus
             property var focus: ({ work: 25, short: 5, long: 15, rounds: 4, dnd: true })
             property var twitch: []            // Twitch-Kanäle (Login-Namen)
+            property string holidayState: "HE" // Bundesland für Feiertage
         }
     }
 }
