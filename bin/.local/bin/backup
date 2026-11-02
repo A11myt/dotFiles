@@ -70,7 +70,7 @@ run)
     load
     t0=$(date +%s)
     restic backup "$HOME" --exclude-file="$EXCLUDES" --exclude-caches --one-file-system \
-        --tag auto --host "$(hostname)" --quiet || die "restic backup (Exit $?)"
+        --tag auto --host "$(uname -n)" --quiet || die "restic backup (Exit $?)"
     # einmal pro Woche: alte Stände ausdünnen (7 täglich, 4 wöchentlich, 6 monatlich)
     if [[ ! -f $STAMP/last-prune || $(find "$STAMP/last-prune" -mtime +6) ]]; then
         restic forget --tag auto --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune --quiet \
