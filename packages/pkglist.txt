@@ -48,6 +48,7 @@ hyprpicker
 hyprsunset
 hyprutils
 imagemagick
+intel-media-driver
 jdk21-openjdk
 jq
 jupyterlab
@@ -118,6 +119,7 @@ virtualbox-host-dkms
 vulkan-intel
 vulkan-tools
 vulkan-validation-layers
+wf-recorder
 wl-clipboard
 xdg-desktop-portal-hyprland
 xorg-xeyes

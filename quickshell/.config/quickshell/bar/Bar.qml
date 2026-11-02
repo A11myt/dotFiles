@@ -36,6 +36,7 @@ PanelWindow {
     Row {
         anchors { right: parent.right; rightMargin: 16; verticalCenter: parent.verticalCenter }
         spacing: 12
+        RecordingPill {}
         Updates { barKey: "updates" }
         Privacy { barKey: "privacy" }
         Volume { barKey: "volume" }

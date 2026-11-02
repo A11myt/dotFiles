@@ -21,6 +21,7 @@ hl.bind("Print",                      hl.dsp.exec_cmd("qs ipc call screenshot re
 hl.bind("Insert",                     hl.dsp.exec_cmd("qs ipc call screenshot region"))   -- Screenshot: Bereich
 hl.bind("SHIFT + Print",              hl.dsp.exec_cmd("qs ipc call screenshot window"))   -- Screenshot: Fenster
 hl.bind("CTRL + Print",               hl.dsp.exec_cmd("qs ipc call screenshot screen"))   -- Screenshot: ganzer Bildschirm
+hl.bind("ALT + Print",                hl.dsp.exec_cmd("qs ipc call screenshot record"))   -- Bildschirmaufnahme starten/stoppen
 hl.bind(mainMod .. " + A",            hl.dsp.exec_cmd("qs ipc call panels toggle center"))   -- Benachrichtigungszentrale
 hl.bind(mainMod .. " + S",            hl.dsp.exec_cmd("qs ipc call panels toggle quick"))   -- Quick Settings
 hl.bind(mainMod .. " + grave",        hl.dsp.exec_cmd("~/.local/bin/dropdown"))   -- Drop-down-Terminal

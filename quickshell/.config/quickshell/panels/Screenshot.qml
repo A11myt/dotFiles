@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import qs
+import qs.services
 
 // Screenshot-Werkzeug (Print = Bereich, Shift+Print = Fenster, Strg+Print = Bildschirm).
 // Friert den Bildschirm ein (grim → Vollbild), man wählt auf dem Standbild aus,
@@ -14,6 +15,8 @@ PanelWindow {
     property string mode: "region"            // region | window | screen
     property bool active: false
     property bool editAfter: false
+    property bool video: false              // Video statt Foto (Alt+Druck)
+    property bool audio: false              // Systemton mit aufnehmen
     property bool hasSatty: false
     property string stamp: ""
     readonly property var mon: Hyprland.focusedMonitor
@@ -30,9 +33,11 @@ PanelWindow {
 
     IpcHandler {
         target: "screenshot"
-        function region(): void { win.start("region") }
-        function window(): void { win.start("window") }
-        function screen(): void { win.start("screen") }
+        function region(): void { win.video = false; win.start("region") }
+        function window(): void { win.video = false; win.start("window") }
+        function screen(): void { win.video = false; win.start("screen") }
+        // Video: Auswahl wie beim Screenshot; läuft schon eine Aufnahme → stoppen
+        function record(): void { if (Recorder.recording) Recorder.stop(); else { win.video = true; win.start("region") } }
         function cancel(): void { win.cancel() }
     }
 
@@ -48,7 +53,7 @@ PanelWindow {
         property string want: "region"
         onExited: code => {
             if (code !== 0) { Quickshell.execDetached(["notify-send", "-a", "Screenshot", "Screenshot fehlgeschlagen", "grim konnte den Bildschirm nicht aufnehmen"]); return }
-            if (want === "screen") { win.finishFull(); return }
+            if (want === "screen") { win.video ? win.finish(Qt.rect(0, 0, win.width, win.height)) : win.finishFull(); return }
             win.stamp = String(Date.now())
             win.mode = want
             win.sel = Qt.rect(0, 0, 0, 0)
@@ -90,8 +95,20 @@ PanelWindow {
                                 : mode === "screen" ? Qt.rect(0, 0, width, height) : Qt.rect(0, 0, 0, 0)
 
     // 3. Fertig: in Bildpixel umrechnen (Skalierung) und an das Skript geben
+    // Video: Overlay erst verschwinden lassen, dann aufnehmen (sonst ist es im ersten Bild)
+    property string recTarget: ""
+    Timer { id: recDelay; interval: 250; onTriggered: Recorder.start(win.recTarget, win.audio) }
     function finish(r) {
         if (r.width < 2 || r.height < 2) return
+        if (video) {
+            active = false
+            Quickshell.execDetached(["rm", "-f", full])
+            const whole = r.width >= width - 1 && r.height >= height - 1
+            // wf-recorder erwartet logische Koordinaten im Gesamtlayout (wie slurp)
+            recTarget = whole ? "output:" + (mon?.name ?? "") : `${Math.round((mon?.x ?? 0) + r.x)},${Math.round((mon?.y ?? 0) + r.y)} ${Math.round(r.width)}x${Math.round(r.height)}`
+            recDelay.restart()
+            return
+        }
         const sx = backdrop.implicitWidth / Math.max(1, width), sy = backdrop.implicitHeight / Math.max(1, height)
         const x = Math.max(0, Math.round(r.x * sx)), y = Math.max(0, Math.round(r.y * sy))
         const w = Math.min(Math.round(r.width * sx), backdrop.implicitWidth - x), h = Math.min(Math.round(r.height * sy), backdrop.implicitHeight - y)
@@ -186,6 +203,8 @@ PanelWindow {
             else if (e.key === Qt.Key_F || e.key === Qt.Key_2) win.mode = "window"
             else if (e.key === Qt.Key_B || e.key === Qt.Key_3) win.mode = "screen"
             else if (e.key === Qt.Key_E && win.hasSatty) win.editAfter = !win.editAfter
+            else if (e.key === Qt.Key_V) win.video = !win.video
+            else if (e.key === Qt.Key_T && win.video) win.audio = !win.audio
             else return
             e.accepted = true
         }
@@ -219,8 +238,28 @@ PanelWindow {
                 }
             }
             Rectangle { implicitWidth: 1; implicitHeight: 24; color: Theme.outlineVariant }
+            // Foto / Video
+            Repeater {
+                model: [{ v: false, t: "󰄀  Foto" }, { v: true, t: "󰕧  Video" }]
+                delegate: Rectangle {
+                    required property var modelData
+                    readonly property bool sel: win.video === modelData.v
+                    implicitWidth: kindTxt.implicitWidth + 24; implicitHeight: 34; radius: 10
+                    color: sel ? (modelData.v ? Theme.error : Theme.primary) : (kindMouse.containsMouse ? Theme.surfaceContainerHighest : "transparent")
+                    Text { id: kindTxt; anchors.centerIn: parent; text: modelData.t; color: parent.sel ? (modelData.v ? Theme.fgOnError : Theme.fgOnPrimary) : Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx }
+                    MouseArea { id: kindMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.video = modelData.v }
+                }
+            }
             Rectangle {
-                visible: win.hasSatty
+                visible: win.video
+                implicitWidth: audioTxt.implicitWidth + 24; implicitHeight: 34; radius: 10
+                color: win.audio ? Qt.alpha(Theme.primary, 0.2) : (audioMouse.containsMouse ? Theme.surfaceContainerHighest : "transparent")
+                Text { id: audioTxt; anchors.centerIn: parent; text: (win.audio ? "󰕾" : "󰖁") + "  Ton"; color: win.audio ? Theme.primary : Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx }
+                MouseArea { id: audioMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: win.audio = !win.audio }
+            }
+            Rectangle { implicitWidth: 1; implicitHeight: 24; color: Theme.outlineVariant }
+            Rectangle {
+                visible: win.hasSatty && !win.video
                 implicitWidth: editTxt.implicitWidth + 24; implicitHeight: 34; radius: 10
                 color: win.editAfter ? Qt.alpha(Theme.primary, 0.2) : (editMouse.containsMouse ? Theme.surfaceContainerHighest : "transparent")
                 Text { id: editTxt; anchors.centerIn: parent; text: (win.editAfter ? "󰄬 " : "") + "󰏫  Bearbeiten"; color: win.editAfter ? Theme.primary : Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx }
