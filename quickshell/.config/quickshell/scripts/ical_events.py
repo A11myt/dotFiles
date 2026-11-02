@@ -213,6 +213,19 @@ def main() -> int:
     except (subprocess.TimeoutExpired, ValueError) as e:
         errors.append({"cal": "Obsidian", "error": type(e).__name__})
     result.sort(key=lambda e: (e["start"], not e["allDay"]))
+    # gleiche Termine (Titel + Beginn) aus Google und Obsidian nur einmal zeigen;
+    # die Obsidian-Notiz (Öffnen/Löschen) bleibt am übrigen Eintrag hängen
+    seen, merged = {}, []
+    for e in result:
+        k = (e["title"].strip().lower(), e["start"])
+        if k in seen:
+            first = seen[k]
+            if e.get("path") and not first.get("path"):
+                first["path"], first["rel"] = e["path"], e["rel"]
+            continue
+        seen[k] = e
+        merged.append(e)
+    result = merged
     print(json.dumps({"events": result, "errors": errors, "time": int(time.time())}, ensure_ascii=False))
     return 0
 

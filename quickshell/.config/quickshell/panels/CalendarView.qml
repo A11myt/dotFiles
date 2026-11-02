@@ -47,10 +47,31 @@ PanelWindow {
         selected = d
         fTitle.text = ""; fDate.text = Qt.formatDate(d, "dd.MM.yyyy"); fStart.text = ""; fEnd.text = ""; fLoc.text = ""; fNote.text = ""
         fAllDay.checked = false; formError = ""
+        toGoogle = true; toObsidian = false
         editing = true
         fTitle.forceActiveFocus()
     }
     property string formError: ""
+    property bool toGoogle: true          // Google Kalender im Browser vorausgefüllt öffnen
+    property bool toObsidian: false       // zusätzlich Notiz in Obsidian/Termine
+    // Google-Kalender-Link mit fertig ausgefülltem Termin (dort nur noch „Speichern“)
+    function googleUrl(ev) {
+        const d = ev.date.replace(/-/g, "")
+        let dates
+        if (ev.allDay) {
+            const n = new Date(ev.date + "T12:00:00"); n.setDate(n.getDate() + 1)
+            dates = d + "/" + Qt.formatDate(n, "yyyyMMdd")
+        } else {
+            const st = new Date(ev.date + "T" + ev.start + ":00")
+            const en = ev.end ? new Date(ev.date + "T" + ev.end + ":00") : new Date(st.getTime() + 3600000)
+            if (en <= st) en.setDate(en.getDate() + 1)
+            dates = Qt.formatDateTime(st, "yyyyMMdd'T'HHmmss") + "/" + Qt.formatDateTime(en, "yyyyMMdd'T'HHmmss")
+        }
+        return "https://calendar.google.com/calendar/render?action=TEMPLATE"
+            + "&text=" + encodeURIComponent(ev.title) + "&dates=" + dates + "&ctz=Europe/Berlin"
+            + (ev.location ? "&location=" + encodeURIComponent(ev.location) : "")
+            + (ev.note ? "&details=" + encodeURIComponent(ev.note) : "")
+    }
     function saveEvent() {
         const t = fTitle.text.trim()
         const dm = fDate.text.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/)
@@ -66,10 +87,12 @@ PanelWindow {
             if (en === null) { formError = "Endzeit bitte als HH:MM"; return }
             ev.start = st; if (en) ev.end = en
         }
-        Calendars.addEvent(ev)
+        if (!toGoogle && !toObsidian) { formError = "Bitte Google und/oder Obsidian wählen"; return }
+        if (toObsidian) Calendars.addEvent(ev)
         selected = new Date(y, +dm[2] - 1, +dm[1]); month = selected.getMonth(); year = selected.getFullYear()
         editing = false
-        keys.forceActiveFocus()
+        if (toGoogle) { Qt.openUrlExternally(googleUrl(ev)); open = false }   // Browser nach vorn
+        else keys.forceActiveFocus()
     }
 
     function shift(d) { const m = month + d; year += Math.floor(m / 12); month = ((m % 12) + 12) % 12 }
@@ -241,7 +264,7 @@ PanelWindow {
                     anchors { fill: parent; margins: 16 }
                     spacing: 10
                     Text { text: "Neuer Termin"; color: Theme.fg; font.family: Theme.fontAccent; font.pixelSize: 20 }
-                    Text { text: "wird als Notiz in Obsidian/Termine gespeichert"; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11 }
+                    Text { text: "Google: öffnet sich ausgefüllt im Browser → dort „Speichern“"; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; Layout.fillWidth: true; wrapMode: Text.WordWrap }
                     FormField { id: fTitle; label: "Titel"; placeholder: "z. B. Zahnarzt"; onAccepted: win.saveEvent() }
                     FormField { id: fDate; label: "Datum"; placeholder: "TT.MM.JJJJ"; onAccepted: win.saveEvent() }
                     RowLayout {
@@ -275,6 +298,22 @@ PanelWindow {
                             wrapMode: TextEdit.Wrap
                             color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12
                             Keys.onEscapePressed: { win.editing = false; keys.forceActiveFocus() }
+                        }
+                    }
+                    // Ziele
+                    Repeater {
+                        model: [{ k: "toGoogle", t: "󰃭  Google Kalender" }, { k: "toObsidian", t: "󱓧  Auch in Obsidian" }]
+                        delegate: RowLayout {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            Text { text: modelData.t; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; Layout.fillWidth: true }
+                            Rectangle {
+                                readonly property bool on: win[modelData.k]
+                                implicitWidth: 40; implicitHeight: 22; radius: 11
+                                color: on ? Theme.primary : Theme.surfaceContainerHighest
+                                Rectangle { width: 16; height: 16; radius: 8; anchors.verticalCenter: parent.verticalCenter; x: parent.on ? parent.width - width - 3 : 3; color: parent.on ? Theme.fgOnPrimary : Theme.outline; Behavior on x { NumberAnimation { duration: 120 } } }
+                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: win[modelData.k] = !win[modelData.k] }
+                            }
                         }
                     }
                     Text { visible: win.formError !== ""; text: win.formError; color: Theme.error; font.family: Theme.fontUi; font.pixelSize: 12 }
