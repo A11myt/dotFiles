@@ -40,10 +40,20 @@ DEFER_LOCK = HOME / ".cache/matugen/wallthemes-deferred.lock"
 CACHE = HOME / ".local/share/wallthemes"
 WALL_DIR = HOME / "Pictures/wallpapers"
 LOG = HOME / ".logs/wallthemes" / f"{datetime.now():%Y-%m-%d}.log"
-MATUGEN_ARGS = ["--source-color-index", "0"]
 MODE = "dark"
 IMAGE_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
 HOOK_TIMEOUT = 60
+
+
+def matugen_args() -> list[str]:
+    """Schema und Ausgangsfarbe aus wallthemes.toml ([matugen] scheme/source)."""
+    rules = tomllib.loads(RULES.read_text()) if RULES.exists() else {}
+    m = rules.get("matugen", {})
+    args = ["-t", f"scheme-{m.get('scheme', 'tonal-spot')}"]
+    source = m.get("source", "dominant")
+    # dominant = häufigste Farbe im Bild, sonst --prefer value/saturation/…
+    args += ["--source-color-index", "0"] if source == "dominant" else ["--prefer", source]
+    return args
 
 
 def log(level: str, msg: str) -> None:
@@ -72,7 +82,7 @@ def stamp_for(image: Path, cfg: dict) -> str:
         h.update(src.read_bytes() if src.exists() else b"missing")
     version = subprocess.run(["matugen", "--version"], capture_output=True, text=True).stdout
     h.update(version.encode())
-    h.update(" ".join(MATUGEN_ARGS + [MODE]).encode())
+    h.update(" ".join(matugen_args() + [MODE]).encode())
     return h.hexdigest()
 
 
@@ -95,7 +105,7 @@ def render(image: Path, cfg: dict, target: Path, stamp: str) -> None:
 
         files = tmp / "files"
         r = subprocess.run(
-            ["matugen", "image", str(image), *MATUGEN_ARGS, "-m", MODE,
+            ["matugen", "image", str(image), *matugen_args(), "-m", MODE,
              "-c", str(cfg_file), "--prefix", str(files), "--json", "hex"],
             capture_output=True, text=True,
         )

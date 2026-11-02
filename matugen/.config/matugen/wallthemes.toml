@@ -8,6 +8,12 @@
 
 delay = 0   # Sekunden Wartezeit vor dem Hintergrund-Lauf
 
+[matugen]
+# Farbschema: tonal-spot (gedämpft), vibrant (kräftig), fidelity, content, expressive …
+scheme = "tonal-spot"
+# Ausgangsfarbe: dominant = häufigste Farbe im Bild, value = hellste, saturation = gesättigtste
+source = "dominant"
+
 [defer]
 # Template = Prozessnamen (wie in /proc/<pid>/comm), oder "always"
 steam        = "always"            # Skin greift erst beim nächsten Steam-Start
