@@ -1,21 +1,20 @@
 import QtQuick
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Widgets
 import qs
 import qs.components
-import qs.services
 
-// Belegte Arbeitsflächen: ein App-Icon pro Fenster (Nummer optional, Einstellungen → Leiste),
-// leere: Nummer. 1–5 immer sichtbar, belegte darüber kommen dazu
+// Nummer + bis zu 3 einfarbige App-Symbole (Nerd Font, sonst eingefärbtes Icon);
+// 1–5 immer sichtbar, belegte darüber kommen dazu
 Pill {
     id: root
     padX: 6
     readonly property var base: [1, 2, 3, 4, 5]
-    readonly property int maxIcons: 4
-    readonly property bool numbers: Config.bar.wsNumbers === true
+    readonly property int maxIcons: 3
 
-    // Arbeitsfläche → Fensterklassen, eine pro Fenster (ohne Scratchpads), nach Klasse gruppiert
+    // Arbeitsfläche → Fensterklassen (ohne Duplikate, ohne Scratchpads)
     readonly property var occupied: {
         const m = {}
         for (const t of Hyprland.toplevels.values) {
@@ -23,17 +22,31 @@ Pill {
             const cls = t.lastIpcObject?.class ?? ""
             if (id < 1 || !cls) continue
             if (!m[id]) m[id] = []
-            m[id].push(cls)
+            if (!m[id].includes(cls)) m[id].push(cls)
         }
-        for (const k in m) m[k].sort()
         return m
     }
-    function summary(classes) {
-        const n = {}
-        for (const c of classes) n[c] = (n[c] ?? 0) + 1
-        return Object.entries(n).map(([c, k]) => k > 1 ? `${c} ×${k}` : c).join(", ")
-    }
     readonly property var ids: [...new Set([...base, ...Object.keys(occupied).map(Number)])].sort((a, b) => a - b)
+
+    // einfarbige Symbole für bekannte Programme (Fensterklasse klein geschrieben)
+    readonly property var glyphs: ({
+        "firefox": "󰈹", "firefox-esr": "󰈹", "librewolf": "󰈹", "zen": "󰈹",
+        "chromium": "", "google-chrome": "", "brave-browser": "",
+        "alacritty": "", "kitty": "", "foot": "", "org.wezfurlong.wezterm": "", "dropdown": "", "xterm": "",
+        "org.gnome.nautilus": "󰉋", "thunar": "󰉋", "nemo": "󰉋",
+        "code": "󰨞", "code-oss": "󰨞", "vscodium": "󰨞", "dev.zed.zed": "󰨞",
+        "obsidian": "󰠮", "md.obsidian.obsidian": "󰠮",
+        "discord": "󰙯", "vesktop": "󰙯", "spotify": "󰓇", "steam": "󰓓",
+        "thunderbird": "󰇰", "org.telegram.desktop": "", "signal": "󰭹",
+        "vlc": "󰕼", "mpv": "󰐌", "gimp": "", "org.inkscape.inkscape": "", "godot": "", "blender": "󰂫",
+        "org.pulseaudio.pavucontrol": "󰕾", "blueman-manager": "󰂯", "satty": "󰏫",
+        "org.gnome.papers": "󰈦", "org.gnome.evince": "󰈦", "zathura": "󰈦", "ristretto": "󰋩", "org.gnome.loupe": "󰋩",
+        "floating-term": ""
+    })
+    function glyphFor(cls) {
+        const c = cls.toLowerCase()
+        return glyphs[c] ?? (c.startsWith("libreoffice") ? "󰏆" : c.startsWith("steam_app") ? "󰊴" : "")
+    }
 
     function iconFor(cls) {
         const e = DesktopEntries.heuristicLookup(cls)
@@ -54,7 +67,7 @@ Pill {
             readonly property var classes: root.occupied[modelData] ?? []
             readonly property bool wsHovered: wsMouse.containsMouse
 
-            implicitWidth: wsRow.implicitWidth + (ws.classes.length ? 14 : 20)
+            implicitWidth: wsRow.implicitWidth + 20
             implicitHeight: 22
             radius: 14
             color: active ? Qt.alpha(Theme.primary, wsHovered ? 0.88 : 0.75)
@@ -67,7 +80,6 @@ Pill {
                 anchors.centerIn: parent
                 spacing: 4
                 Text {
-                    visible: ws.classes.length === 0 || root.numbers
                     text: ws.modelData
                     anchors.verticalCenter: parent.verticalCenter
                     color: ws.active ? Theme.fgOnPrimary : (ws.wsHovered ? Theme.primary : Theme.fgMuted)
@@ -78,11 +90,39 @@ Pill {
                 }
                 Repeater {
                     model: ws.classes.slice(0, root.maxIcons)
-                    delegate: IconImage {
+                    delegate: Item {
+                        id: app
                         required property string modelData
+                        readonly property string glyph: root.glyphFor(modelData)
+                        readonly property color tint: ws.active ? Theme.fgOnPrimary : (ws.wsHovered ? Theme.primary : Theme.fgMuted)
                         anchors.verticalCenter: parent.verticalCenter
-                        implicitSize: 17
-                        source: root.iconFor(modelData)
+                        implicitWidth: glyph ? glyphText.implicitWidth : 15
+                        implicitHeight: 15
+                        Text {
+                            id: glyphText
+                            visible: app.glyph !== ""
+                            anchors.centerIn: parent
+                            text: app.glyph
+                            color: app.tint
+                            font.family: Theme.fontUi
+                            font.pixelSize: 15
+                            Behavior on color { ColorAnimation { duration: Theme.anim } }
+                        }
+                        // unbekannte Programme: echtes Icon, einfarbig eingefärbt
+                        IconImage {
+                            id: icon
+                            visible: false
+                            anchors.fill: parent
+                            source: app.glyph ? "" : root.iconFor(app.modelData)
+                        }
+                        MultiEffect {
+                            visible: app.glyph === ""
+                            anchors.fill: parent
+                            source: icon
+                            colorization: 1.0
+                            colorizationColor: app.tint
+                            brightness: 0.15
+                        }
                     }
                 }
                 Text {
@@ -94,7 +134,7 @@ Pill {
                 }
             }
             MouseArea { id: wsMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.focus(ws.modelData) }
-            Tooltip { target: ws; show: ws.wsHovered; text: `Arbeitsfläche ${ws.modelData}: ` + (ws.classes.length ? root.summary(ws.classes) : "leer") }
+            Tooltip { target: ws; show: ws.wsHovered; text: ws.classes.length ? ws.classes.join(", ") : "leer" }
         }
     }
 }
