@@ -134,19 +134,19 @@ PanelWindow {
             if (!e) return []
             const en = emojiDe[e] ?? Object.entries(emojiDe).find(([de]) => de.startsWith(e) && e.length >= 3)?.[1]
             return emojis.filter(x => x.k.includes(e) || (en && x.k.includes(en))).slice(0, 40)
-                .map(x => ({ glyph: x.e, emoji: true, title: x.n, sub: "Emoji · Enter kopiert", run: () => win.copy(x.e, x.e + "  " + x.n) }))
+                .map(x => ({ key: "emoji:" + x.e, glyph: x.e, emoji: true, title: x.n, sub: "Emoji · Enter kopiert", run: () => win.copy(x.e, x.e + "  " + x.n) }))
         }
         if (raw.startsWith(">")) {                             // Befehl
             const cmd = raw.slice(1).trim()
-            return cmd ? [{ glyph: "", title: cmd, sub: "Im Terminal ausführen", run: () => Quickshell.execDetached(["alacritty", "--hold", "-e", "bash", "-c", cmd]) }] : []
+            return cmd ? [{ key: "cmd", glyph: "", title: cmd, sub: "Im Terminal ausführen", run: () => Quickshell.execDetached(["alacritty", "--hold", "-e", "bash", "-c", cmd]) }] : []
         }
         if (q.startsWith("g ") && q.length > 2) {              // Websuche
             const s = raw.slice(2).trim()
-            return [{ glyph: "", title: s, sub: "Im Web suchen", run: () => Qt.openUrlExternally("https://duckduckgo.com/?q=" + encodeURIComponent(s)) }]
+            return [{ key: "web", glyph: "", title: s, sub: "Im Web suchen", run: () => Qt.openUrlExternally("https://duckduckgo.com/?q=" + encodeURIComponent(s)) }]
         }
         const out = []
         const c = calc(raw)
-        if (c !== null) out.push({ glyph: "󰃬", title: String(c), sub: raw + "  · Enter kopiert", run: () => win.copy(String(c)) })
+        if (c !== null) out.push({ key: "calc", glyph: "󰃬", title: String(c), sub: raw + "  · Enter kopiert", run: () => win.copy(String(c)) })
         const apps = DesktopEntries.applications.values
             .filter(a => !a.noDisplay)
             .map(a => ({ a, s: Math.max(score(a.name, q), score(a.genericName, q) * 0.8, score((a.keywords ?? []).join(" "), q) * 0.6) }))
@@ -157,8 +157,8 @@ PanelWindow {
             .filter(x => !strong || x.s >= 40)
             .sort((x, y) => (y.s + (usage[y.a.id] ?? 0) * 3) - (x.s + (usage[x.a.id] ?? 0) * 3) || x.a.name.localeCompare(y.a.name))
             .slice(0, 30)
-            .map(x => ({ icon: x.a.icon, title: x.a.name, sub: x.a.genericName || x.a.comment || "", run: () => { win.bump(x.a.id); x.a.execute() } }))
-        const acts = q ? actions.filter(x => score(x.keys, q) >= 40).map(x => ({ glyph: x.icon, title: x.title, sub: "Aktion", run: x.run, keep: x.keep })) : []
+            .map(x => ({ key: "app:" + x.a.id, icon: x.a.icon, title: x.a.name, sub: x.a.genericName || x.a.comment || "", run: () => { win.bump(x.a.id); x.a.execute() } }))
+        const acts = q ? actions.filter(x => score(x.keys, q) >= 40).map(x => ({ key: "act:" + x.title, glyph: x.icon, title: x.title, sub: "Aktion", run: x.run, keep: x.keep })) : []
         return out.concat(acts, appRes)
     }
 
@@ -275,7 +275,7 @@ PanelWindow {
                 Layout.fillHeight: true
                 clip: true
                 spacing: 2
-                model: ScriptModel { values: win.results }
+                model: ScriptModel { values: win.results; objectProp: "key" }   // über Schlüssel abgleichen, sonst bleiben alte Zeilen liegen
                 highlightMoveDuration: 80
                 highlight: Rectangle { radius: 10; color: Theme.surfaceContainerHigh; Rectangle { width: 3; height: parent.height - 14; radius: 2; color: Theme.primary; anchors { left: parent.left; verticalCenter: parent.verticalCenter } } }
                 delegate: Item {

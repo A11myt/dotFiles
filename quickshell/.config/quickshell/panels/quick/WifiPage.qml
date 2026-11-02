@@ -13,15 +13,22 @@ ColumnLayout {
     readonly property var dev: Networking.devices.values.find(d => d.type === DeviceType.Wifi) ?? null
     property string expanded: ""          // Name der aufgeklappten Zeile
     property var errors: ({})              // Name → Fehlertext
+    property bool showAll: false           // „Weitere Netze“ aufgeklappt
 
     spacing: 8
 
     Binding { target: page.dev; property: "scannerEnabled"; value: true; when: page.active && page.dev !== null && Networking.wifiEnabled }
-    onActiveChanged: if (!active) expanded = ""
+    onActiveChanged: if (!active) { expanded = ""; showAll = false }
 
     readonly property var networks: (dev?.networks?.values ?? [])
         .filter(n => n.name)
         .sort((a, b) => (b.connected - a.connected) || (b.known - a.known) || (b.signalStrength - a.signalStrength))
+    // kompakt: verbunden + gespeichert + die 3 stärksten fremden (nicht ganz schwach)
+    readonly property var mine: networks.filter(n => n.connected || n.known)
+    readonly property var others: networks.filter(n => !n.connected && !n.known)
+    readonly property var topOthers: others.filter(n => n.signalStrength >= 0.25).slice(0, 3)
+    readonly property var shown: showAll ? networks : mine.concat(topOthers)
+    readonly property int hiddenCount: networks.length - mine.length - topOthers.length
 
     function strengthIcon(s) { return s > 0.75 ? "󰤨" : s > 0.5 ? "󰤥" : s > 0.25 ? "󰤢" : "󰤟" }
     function setError(name, msg) { const e = Object.assign({}, errors); if (msg) e[name] = msg; else delete e[name]; errors = e }
@@ -63,7 +70,7 @@ ColumnLayout {
             spacing: 6
 
             Repeater {
-                model: page.networks
+                model: page.shown
                 delegate: ListRow {
                     id: row
                     required property var modelData
@@ -148,6 +155,20 @@ ColumnLayout {
                     }
                     onExpandedChanged: if (expanded && needsPassword) pw.forceActiveFocus()
                 }
+            }
+
+            // Rest auf-/zuklappen
+            Rectangle {
+                visible: page.hiddenCount > 0 || page.showAll
+                Layout.fillWidth: true
+                implicitHeight: 32; radius: 10
+                color: moreM.containsMouse ? Theme.surfaceContainerHighest : "transparent"
+                Text {
+                    anchors.centerIn: parent
+                    text: page.showAll ? "󰅃  Weniger anzeigen" : `󰅀  Weitere Netze (${page.hiddenCount})`
+                    color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12
+                }
+                MouseArea { id: moreM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: page.showAll = !page.showAll }
             }
 
             Text {

@@ -15,7 +15,8 @@ PanelWindow {
     readonly property bool bottom: Quickshell.env("QS_BAR_BOTTOM") === "1"
     anchors { top: !bottom; bottom: bottom; left: true; right: true }
     implicitHeight: 40
-    color: Qt.alpha("#0f0f0f", 0.2)
+    // dunkel: wie bisher fast durchsichtig; hell: helle Fläche, sonst ist die dunkle Schrift unlesbar
+    color: Theme.isLight ? Qt.alpha(Theme.surface, 0.72) : Qt.alpha("#0f0f0f", 0.2)
     WlrLayershell.namespace: "qs-bar"
 
     Row {

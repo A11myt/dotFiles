@@ -32,6 +32,8 @@ Singleton {
     readonly property color outline: c.outline ?? "#90909a"
     readonly property color outlineVariant: c.outline_variant ?? "#45464f"
     readonly property color scrim: c.scrim ?? "#000000"
+    // helles Theme? (aus der Flächenfarbe, damit es auch ohne Modus-Feld stimmt)
+    readonly property bool isLight: surface.hslLightness > 0.5
 
     readonly property string fontUi: f.ui ?? "sans-serif"
     readonly property string fontMono: f.mono ?? "monospace"
