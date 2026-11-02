@@ -14,7 +14,7 @@ Pill {
 
     Process {
         id: proc
-        command: ["bash", Quickshell.env("HOME") + "/.config/ags/scripts/weather-openmeteo.sh"]
+        command: ["bash", Quickshell.shellDir + "/scripts/weather.sh"]
         stdout: StdioCollector {
             onStreamFinished: { try { const d = JSON.parse(text); p.txt = d.text; p.tip = d.tooltip } catch (e) {} }
         }

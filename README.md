@@ -10,7 +10,7 @@ Verwaltet mit **GNU stow**: jedes Verzeichnis hier ist ein Paket, dessen Inhalt 
 | Paket | Ziel | Inhalt |
 |---|---|---|
 | `hypr` | `~/.config/hypr` | Hyprland (Lua), hyprlock, hypridle |
-| `ags` | `~/.config/ags` | Statusleiste (AGS v3, TypeScript) inkl. Update-Modul |
+| `quickshell` | `~/.config/quickshell` | Oberfläche (Quickshell/QML): Leiste, Benachrichtigungen, Panels, OSD – Vorgänger AGS: `git checkout ags-final` |
 | `matugen` | `~/.config/matugen` | Farbschema-Templates, `wallpaper.sh`, Wallpaper-Picker (`SUPER+W`) |
 | `alacritty` `rofi` | `~/.config/…` | Terminal, Launcher (Benachrichtigungen und Power-Menü macht AGS) |
 | `nvim` | `~/.config/nvim` | AstroNvim v5 |

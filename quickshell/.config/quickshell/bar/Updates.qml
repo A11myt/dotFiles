@@ -16,6 +16,7 @@ Pill {
     readonly property string notifiedFile: Quickshell.env("HOME") + "/.cache/quickshell/updates-notified"
 
     property string status: "idle"       // idle | checking | ok | error
+    property bool hasResult: false       // bis zur ersten Antwort Lade-Symbol statt „aktuell“
     property var pkgs: []                // { name, from, to, aur, important }
     property string reboot: ""           // "7.2.9 → 7.2.11"
     property date checkedAt
@@ -64,11 +65,13 @@ Pill {
                 const r = root.parse(text)
                 root.checkedAt = new Date()
                 if (r === null) {
+                    root.hasResult = true
                     root.status = "error"
                     root.nextCheck = new Date(Date.now() + root.retryAfter)
                     retry.restart()
                 } else {
                     root.pkgs = r
+                    root.hasResult = true
                     root.status = "ok"
                     root.nextCheck = new Date(Date.now() + root.checkEvery)
                     root.notifyImportant(r)
@@ -127,7 +130,7 @@ Pill {
     BarText {
         readonly property string boot: root.reboot ? "  󰜉" : ""
         text: root.status === "error" ? "󰀦" + boot
-            : (root.status === "checking" && root.pkgs.length === 0 && !root.checkedAt.getTime()) ? "󰑓"
+            : !root.hasResult ? "󰑓"
             : root.pkgs.length === 0 ? "󰗠" + boot
             : `󰚰 ${root.repoCount && root.aurCount ? root.repoCount + " · " + root.aurCount : root.pkgs.length}` + boot
         color: root.status === "error" || root.hasImportant ? Theme.error

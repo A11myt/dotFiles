@@ -161,6 +161,19 @@ def check_hyprland() -> None:
                "Keybinds finden ~/.local/bin (wallthemes)" if found
                else "Hyprland-PATH ohne ~/.local/bin → Keybinds finden eigene Tools nicht")
 
+    # Oberfläche (Quickshell): läuft sie, und meldet sie QML-Fehler?
+    rc, out = sh("pgrep -x qs")
+    if not out.strip():
+        report("fail", "Quickshell läuft nicht (Leiste/Benachrichtigungen fehlen) → qs-restart")
+    else:
+        log = HOME / ".logs/quickshell.log"
+        errs = []
+        if log.exists():
+            errs = [l for l in log.read_text(errors="replace").splitlines()[-400:]
+                    if re.search(r"(ERROR|TypeError|ReferenceError|is not defined|Cannot assign)", l)]
+        report("warn" if errs else "ok", "Quickshell läuft ohne QML-Fehler" if not errs
+               else f"Quickshell meldet {len(errs)} Fehler im Log", "\n".join(re.sub(r"\x1b\[[0-9;]*m", "", e)[:160] for e in errs[-3:]))
+
     lua = HOME / ".config/hypr/themes/matugen.lua"
     if shutil.which("lua"):
         rc, out = sh(f"lua -e 'dofile(\"{lua}\")'")
@@ -224,7 +237,7 @@ def check_toolkits() -> None:
         report("warn", "qt6ct nicht installiert → Qt-Apps ohne Matugen-Farben")
     else:
         env = ""
-        rc, pid = sh("pgrep -n -u $USER -x alacritty || pgrep -n -u $USER -f 'ags run'")
+        rc, pid = sh("pgrep -n -u $USER -x alacritty || pgrep -n -u $USER -x qs")
         if pid.strip():
             try:
                 env = Path(f"/proc/{pid.split()[0]}/environ").read_text(errors="replace")

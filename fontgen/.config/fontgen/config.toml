@@ -30,10 +30,6 @@ mono_size = 10
 input_path  = '~/.config/fontgen/templates/alacritty.toml'
 output_path = '~/.config/alacritty/fonts.toml'
 
-[templates.ags]         # AGS beobachtet fonts.scss und lädt das CSS live neu
-input_path  = '~/.config/fontgen/templates/ags.scss'
-output_path = '~/.config/ags/fonts.scss'
-
 [templates.rofi]        # wird beim nächsten Öffnen gelesen
 input_path  = '~/.config/fontgen/templates/rofi.rasi'
 output_path = '~/.config/rofi/fonts.rasi'
