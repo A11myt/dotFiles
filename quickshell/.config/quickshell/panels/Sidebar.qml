@@ -21,6 +21,8 @@ PanelWindow {
         if (open) {
             Panels.close(); scroller.contentY = 0; fast.restart()
             fastProc.running = true; slowProc.running = true; weatherProc.running = true; loadNews(false); checkHealth(false)
+            if (has("twitch")) Accounts.refreshTwitch(false)
+            if (has("mail")) Accounts.refreshMail(false)
             keys.forceActiveFocus()
         } else { closing.restart(); editing = false }
     }
@@ -288,7 +290,7 @@ PanelWindow {
                         Loader {
                             Layout.fillWidth: true
                             visible: !win.editing
-                            sourceComponent: ({ weather: weatherW, news: newsW, media: mediaW, system: systemW, processes: processesW, battery: batteryW, health: healthW, agenda: agendaW })[slot.modelData] ?? null
+                            sourceComponent: ({ weather: weatherW, news: newsW, media: mediaW, system: systemW, processes: processesW, battery: batteryW, health: healthW, agenda: agendaW, mail: mailW, twitch: twitchW })[slot.modelData] ?? null
                         }
                     }
                 }
@@ -581,6 +583,132 @@ PanelWindow {
                 Layout.fillWidth: true
                 spacing: 6
                 Button2 { text: "󰚰  Jetzt aktualisieren"; onClicked: { win.open = false; Quickshell.execDetached(["alacritty", "-e", "bash", "-c", "yay; echo; read -p 'Fertig – Enter zum Schließen'"]) } }
+            }
+        }
+    }
+
+    Component {
+        id: mailW
+        Card {
+            RowLayout {
+                Layout.fillWidth: true
+                Small { text: "󰇮  E-Mail" + (Accounts.mail.unread ? "  ·  " + Accounts.mail.unread + " ungelesen" : ""); color: Theme.fgMuted; Layout.fillWidth: true }
+                Text {
+                    text: "󰑓"; color: mRef.containsMouse ? Theme.primary : Theme.fgMuted
+                    font.family: Theme.fontUi; font.pixelSize: 14
+                    RotationAnimation on rotation { running: Accounts.mailLoading; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
+                    MouseArea { id: mRef; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Accounts.refreshMail(true) }
+                }
+            }
+            Small { visible: Accounts.mailAccounts.length === 0; Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "Noch kein Postfach – Einstellungen (SUPER+I) → Konten" }
+            Repeater {
+                model: Accounts.mail.accounts ?? []
+                delegate: ColumnLayout {
+                    id: acc
+                    required property var modelData
+                    Layout.fillWidth: true
+                    spacing: 4
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Text { text: acc.modelData.name; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: true; Layout.fillWidth: true }
+                        Rectangle {
+                            visible: acc.modelData.unread > 0
+                            implicitWidth: cnt.implicitWidth + 12; implicitHeight: 18; radius: 9; color: Theme.primary
+                            Text { id: cnt; anchors.centerIn: parent; text: acc.modelData.unread; color: Theme.fgOnPrimary; font.family: Theme.fontUi; font.pixelSize: 10; font.bold: true }
+                        }
+                        Text {
+                            visible: !!acc.modelData.web
+                            text: "󰏌"; color: webM.containsMouse ? Theme.primary : Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 13
+                            MouseArea { id: webM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Qt.openUrlExternally(acc.modelData.web); win.open = false } }
+                        }
+                    }
+                    Small { visible: !!acc.modelData.error; text: "󰀦 " + (acc.modelData.error ?? ""); color: Theme.error }
+                    Small { visible: !acc.modelData.error && acc.modelData.unread === 0; text: "Keine ungelesenen Mails" }
+                    Repeater {
+                        model: acc.modelData.mails
+                        delegate: Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            implicitHeight: mailCol.implicitHeight + 12
+                            radius: 8
+                            color: mailM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer
+                            MouseArea { id: mailM; anchors.fill: parent; hoverEnabled: true; cursorShape: acc.modelData.web ? Qt.PointingHandCursor : Qt.ArrowCursor; onClicked: if (acc.modelData.web) { Qt.openUrlExternally(acc.modelData.web); win.open = false } }
+                            ColumnLayout {
+                                id: mailCol
+                                anchors { left: parent.left; right: parent.right; top: parent.top; margins: 6; leftMargin: 10; rightMargin: 10 }
+                                spacing: 1
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Text { Layout.fillWidth: true; text: modelData.from; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 11; font.bold: true; elide: Text.ElideRight }
+                                    Small { text: win.ago(modelData.date) }
+                                }
+                                Text { Layout.fillWidth: true; text: modelData.subject; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; elide: Text.ElideRight }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Component {
+        id: twitchW
+        Card {
+            id: tw
+            readonly property var chans: Accounts.twitch.channels ?? []
+            RowLayout {
+                Layout.fillWidth: true
+                Small { text: "󰕃  Twitch" + (Accounts.liveCount ? "  ·  " + Accounts.liveCount + " live" : ""); color: Theme.fgMuted; Layout.fillWidth: true }
+                Text {
+                    text: "󰑓"; color: tRef.containsMouse ? Theme.primary : Theme.fgMuted
+                    font.family: Theme.fontUi; font.pixelSize: 14
+                    RotationAnimation on rotation { running: Accounts.twitchLoading; from: 0; to: 360; duration: 900; loops: Animation.Infinite }
+                    MouseArea { id: tRef; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: Accounts.refreshTwitch(true) }
+                }
+            }
+            Small { visible: Config.twitch.length === 0; Layout.fillWidth: true; wrapMode: Text.WordWrap; text: "Noch keine Kanäle – Einstellungen (SUPER+I) → Konten" }
+            Small { visible: Config.twitch.length > 0 && tw.chans.length === 0; text: Accounts.twitchLoading ? "Frage Twitch …" : (Accounts.twitch.error ? "Twitch nicht erreichbar" : "") }
+            // live: groß mit Titel und Spiel
+            Repeater {
+                model: tw.chans.filter(c => c.live)
+                delegate: Rectangle {
+                    required property var modelData
+                    Layout.fillWidth: true
+                    implicitHeight: liveCol.implicitHeight + 14
+                    radius: 10
+                    color: liveM.containsMouse ? Theme.surfaceContainerHighest : Theme.surfaceContainer
+                    MouseArea { id: liveM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Qt.openUrlExternally("https://twitch.tv/" + modelData.login); win.open = false } }
+                    ColumnLayout {
+                        id: liveCol
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 7; leftMargin: 10; rightMargin: 10 }
+                        spacing: 2
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
+                            Rectangle { width: 8; height: 8; radius: 4; color: "#eb0400" }
+                            Text { text: modelData.login; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: 12; font.bold: true }
+                            Small { Layout.fillWidth: true; text: modelData.game; elide: Text.ElideRight; color: Theme.primary }
+                            Small { text: modelData.viewers ? "󰈈 " + modelData.viewers.toLocaleString(Qt.locale("de_DE"), "f", 0) : "" }
+                        }
+                        Text { Layout.fillWidth: true; text: modelData.title; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; wrapMode: Text.WordWrap; maximumLineCount: 2; elide: Text.ElideRight }
+                    }
+                }
+            }
+            // offline: kompakt
+            Flow {
+                visible: tw.chans.some(c => !c.live)
+                Layout.fillWidth: true
+                spacing: 6
+                Repeater {
+                    model: tw.chans.filter(c => !c.live)
+                    delegate: Text {
+                        required property var modelData
+                        text: "○ " + modelData.login
+                        color: offM.containsMouse ? Theme.primary : Theme.outline
+                        font.family: Theme.fontUi; font.pixelSize: 11
+                        MouseArea { id: offM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: { Qt.openUrlExternally("https://twitch.tv/" + modelData.login); win.open = false } }
+                    }
+                }
             }
         }
     }

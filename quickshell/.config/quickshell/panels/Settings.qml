@@ -140,7 +140,7 @@ PanelWindow {
                         model: [{ id: "colors", icon: "󰏘", t: "Farben" }, { id: "fonts", icon: "󰛖", t: "Schrift" },
                                 { id: "dashboard", icon: "󰕮", t: "Dashboard" }, { id: "news", icon: "󰎕", t: "Nachrichten" },
                                 { id: "bar", icon: "󰍜", t: "Leiste" }, { id: "focus", icon: "󱎫", t: "Fokus" },
-                                { id: "calendar", icon: "󰃭", t: "Kalender" }]
+                                { id: "calendar", icon: "󰃭", t: "Kalender" }, { id: "accounts", icon: "󰀉", t: "Konten" }]
                         delegate: Rectangle {
                             required property var modelData
                             readonly property bool on: win.page === modelData.id
@@ -565,6 +565,121 @@ PanelWindow {
                             visible: Calendars.calendars.length > 0
                             text: Calendars.loading ? "Lade Termine …" : Calendars.events.length + " Termine geladen (5 Wochen zurück bis 10 Wochen voraus)"
                             color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 12
+                        }
+                    }
+
+                    // ═════════════ Konten ═════════════
+                    ColumnLayout {
+                        id: accPage
+                        visible: win.page === "accounts"
+                        Layout.fillWidth: true
+                        spacing: 22
+                        property string host: "imap.gmail.com"
+                        property string web: "https://mail.google.com"
+
+                        Section {
+                            title: "E-Mail"
+                            sub: "Ungelesene Mails per IMAP (nur lesen, nichts wird als gelesen markiert). Das Passwort kommt in den Schlüsselbund – bei Gmail ein App-Passwort (myaccount.google.com/apppasswords, braucht 2-Faktor)."
+                        }
+                        ColumnLayout { Layout.fillWidth: true; spacing: 8; Repeater {
+                            model: Accounts.mailAccounts
+                            delegate: Rectangle {
+                                id: macc
+                                required property var modelData
+                                required property int index
+                                readonly property var st: (Accounts.mail.accounts ?? []).find(a => a.user === modelData.user)
+                                Layout.fillWidth: true
+                                implicitHeight: 50; radius: 12
+                                color: Theme.surfaceContainerHigh
+                                RowLayout {
+                                    anchors { fill: parent; leftMargin: 14; rightMargin: 8 }
+                                    spacing: 10
+                                    Text { text: "󰇮"; color: Theme.primary; font.family: Theme.fontUi; font.pixelSize: 18 }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 0
+                                        Text { text: macc.modelData.name + "  ·  " + macc.modelData.user; color: Theme.fg; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx; font.bold: true; elide: Text.ElideRight; Layout.fillWidth: true }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: macc.modelData.host + "  ·  " + (!macc.st ? "noch nicht geprüft" : macc.st.error ? "󰀦 " + macc.st.error : "󰄬 verbunden, " + macc.st.unread + " ungelesen")
+                                            color: macc.st?.error ? Theme.error : Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11; elide: Text.ElideRight
+                                        }
+                                    }
+                                    Chip { text: "󰌋  Passwort"; onClicked: Accounts.askPassword(macc.modelData.user) }
+                                    Chip { text: "󰅖"; onClicked: Accounts.removeMail(macc.index) }
+                                }
+                            }
+                        } }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Repeater {
+                                model: [
+                                    { n: "Gmail", h: "imap.gmail.com", w: "https://mail.google.com" },
+                                    { n: "GMX", h: "imap.gmx.net", w: "https://www.gmx.net" },
+                                    { n: "Web.de", h: "imap.web.de", w: "https://web.de" },
+                                    { n: "Outlook", h: "outlook.office365.com", w: "https://outlook.live.com/mail" },
+                                    { n: "iCloud", h: "imap.mail.me.com", w: "https://www.icloud.com/mail" }
+                                ]
+                                delegate: Chip {
+                                    required property var modelData
+                                    text: modelData.n
+                                    selected: accPage.host === modelData.h
+                                    onClicked: { accPage.host = modelData.h; accPage.web = modelData.w; if (!mailName.text) mailName.text = modelData.n }
+                                }
+                            }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Field { id: mailName; Layout.preferredWidth: 110; placeholder: "Name" }
+                            Field { id: mailUser; Layout.fillWidth: true; placeholder: "E-Mail-Adresse"; onAccepted: addMail.clicked() }
+                            Text { text: accPage.host; color: Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: 11 }
+                            Chip {
+                                id: addMail
+                                text: "󰐕  Hinzufügen"
+                                selected: true
+                                onClicked: {
+                                    const u = mailUser.text.trim()
+                                    if (!/^[^@\s]+@[^@\s]+$/.test(u)) return
+                                    Accounts.addMail({ name: mailName.text.trim() || u.split("@")[1], user: u, host: accPage.host, web: accPage.web })
+                                    mailName.text = ""; mailUser.text = ""
+                                }
+                            }
+                        }
+
+                        Section {
+                            title: "Twitch"
+                            sub: Accounts.twitch.source === "helix" ? "Offizielle Twitch-API verbunden (schnell, mit Zuschauerzahl)."
+                               : "Ohne Einrichtung über decapi.me (inoffiziell, langsamer). Mit eigener Twitch-App schneller und mit Zuschauerzahl."
+                        }
+                        Flow {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Repeater {
+                                model: Config.twitch
+                                delegate: Chip {
+                                    required property string modelData
+                                    readonly property var st: (Accounts.twitch.channels ?? []).find(c => c.login === modelData)
+                                    text: (st?.live ? "🔴 " : "") + modelData + "  󰅖"
+                                    onClicked: Config.set("twitch", Config.twitch.filter(c => c !== modelData))
+                                }
+                            }
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 8
+                            Field { id: twitchName; Layout.fillWidth: true; placeholder: "Kanalname (z. B. aus twitch.tv/kanalname)"; onAccepted: addTwitch.clicked() }
+                            Chip {
+                                id: addTwitch
+                                text: "󰐕  Hinzufügen"
+                                selected: true
+                                onClicked: {
+                                    const c = twitchName.text.trim().replace(/^.*twitch\.tv\//, "").replace(/[^A-Za-z0-9_]/g, "").toLowerCase()
+                                    if (c && Config.twitch.indexOf(c) < 0) Config.set("twitch", Config.twitch.concat([c]))
+                                    twitchName.text = ""
+                                }
+                            }
+                            Chip { text: "󰒓  Offizielle API einrichten"; onClicked: Accounts.setupTwitchApi() }
                         }
                     }
 

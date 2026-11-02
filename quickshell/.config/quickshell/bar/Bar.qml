@@ -38,6 +38,7 @@ PanelWindow {
         spacing: 12
         RecordingPill {}
         FocusPill { barKey: "focus" }
+        MailPill { barKey: "mail" }
         Updates { barKey: "updates" }
         Privacy { barKey: "privacy" }
         Volume { barKey: "volume" }

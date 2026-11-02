@@ -18,7 +18,7 @@ ShellRoot {
     // Dienste beim Start ansprechen – sie initialisieren sich erst beim ersten Zugriff
     property var _init: [UPower.displayDevice, PowerProfiles.profile, Mpris.players, Bluetooth.defaultAdapter,
                          Networking.devices, Hyprland.workspaces, Hyprland.toplevels, DesktopEntries.applications,
-                         Notifs.dnd, Focus.phase]
+                         Notifs.dnd, Focus.phase, Accounts.mailAccounts]
 
     Variants {
         model: Quickshell.screens

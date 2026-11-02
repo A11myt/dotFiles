@@ -41,6 +41,7 @@ Singleton {
     }
     readonly property alias bar: data.bar
     readonly property alias focus: data.focus
+    readonly property alias twitch: data.twitch
 
     // alle bekannten Dashboard-Widgets (Reihenfolge = Vorschlag beim Hinzufügen)
     readonly property var widgetInfo: ({
@@ -51,13 +52,15 @@ Singleton {
         processes: { name: "Prozesse",      icon: "󰓅", desc: "Programme mit der meisten Last" },
         battery:   { name: "Akkus",         icon: "󰁹", desc: "Stand, Gesundheit, Ladegrenze" },
         health:    { name: "System-Gesundheit", icon: "󰓙", desc: "dotdoctor-Ampel, Updates, Arch-News" },
-        agenda:    { name: "Termine",       icon: "󰃭", desc: "Die nächsten Tage aus deinen Kalendern" }
+        agenda:    { name: "Termine",       icon: "󰃭", desc: "Die nächsten Tage aus deinen Kalendern" },
+        mail:      { name: "E-Mail",        icon: "󰇮", desc: "Ungelesene Mails deiner Postfächer" },
+        twitch:    { name: "Twitch",        icon: "󰕃", desc: "Welche Kanäle gerade live sind" }
     })
     // Elemente der Leiste, die sich ausblenden lassen
     readonly property var barInfo: ({
         weather:   "Wetter", media: "Medien (Mitte)", updates: "Updates", privacy: "Mikrofon-Warnung",
         volume:    "Lautstärke", bluetooth: "Bluetooth", battery: "Akku", network: "WLAN",
-        powerProfile: "Energieprofil", focus: "Fokus-Timer"
+        powerProfile: "Energieprofil", focus: "Fokus-Timer", mail: "Ungelesene Mails"
     })
 
     function set(key, value) { data[key] = value }
@@ -89,6 +92,7 @@ Singleton {
             property var bar: ({})              // Schlüssel aus barInfo → false = ausgeblendet
             // Fokus-Timer: Minuten, lange Pause nach n Runden, „Nicht stören“ während Fokus
             property var focus: ({ work: 25, short: 5, long: 15, rounds: 4, dnd: true })
+            property var twitch: []            // Twitch-Kanäle (Login-Namen)
         }
     }
 }

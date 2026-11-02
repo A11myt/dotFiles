@@ -36,6 +36,8 @@
     "widgets": [
         "health",
         "agenda",
+        "mail",
+        "twitch",
         "weather",
         "system",
         "news",
@@ -43,5 +45,6 @@
         "media",
         "battery"
     ],
-    "newsTopic": "Alle"
+    "newsTopic": "Alle",
+    "twitch": []
 }
