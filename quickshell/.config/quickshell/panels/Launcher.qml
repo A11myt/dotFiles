@@ -12,7 +12,8 @@ import qs.services
 //   12*3+4 → Rechner (Enter kopiert)     :herz → Emoji (Enter kopiert)
 //   >htop  → Befehl im Terminal           g suchbegriff → Websuche
 //   Schnellaktionen: sperren, neustart, ausschalten, abmelden, wallpaper, einstellungen, übersicht
-// ↑/↓ bzw. Pfeiltasten wählen, Enter startet, Esc schließt, Tab wechselt Apps ↔ Wallpaper.
+// Reiter „Online“: Wallpaper von wallhaven.cc suchen, Klick lädt und färbt ein.
+// ↑/↓ bzw. Pfeiltasten wählen, Enter startet, Esc schließt, Tab wechselt Apps → Wallpaper → Online.
 PanelWindow {
     id: win
     property bool open: false
@@ -31,6 +32,13 @@ PanelWindow {
         mode = m
         open = true
         if (m === "wallpapers") wallProc.running = true
+        if (m === "online") win.searchOnline(true)
+    }
+    // Tab: Apps → Wallpaper → Online → Apps
+    function nextMode() {
+        mode = mode === "apps" ? "wallpapers" : mode === "wallpapers" ? "online" : "apps"
+        if (mode === "wallpapers") wallProc.running = true
+        if (mode === "online") searchOnline(true)
     }
 
     exclusionMode: ExclusionMode.Ignore
@@ -38,14 +46,16 @@ PanelWindow {
     WlrLayershell.namespace: "qs-launcher"
     WlrLayershell.keyboardFocus: open ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
-    implicitWidth: mode === "wallpapers" ? 1060 : 640
-    implicitHeight: mode === "wallpapers" ? 640 : 520
+    implicitWidth: mode === "apps" ? 640 : 1060
+    implicitHeight: mode === "apps" ? 520 : 640
 
     IpcHandler {
         target: "launcher"
         function apps(): void { win.show("apps") }
         function wallpapers(): void { win.show("wallpapers") }
         function close(): void { win.open = false }
+        function online(): void { win.show("online") }
+        function onlineFind(q: string): void { win.mode = "online"; win.open = true; search.text = q; win.searchOnline(true) }
         // direkt mit Suchbegriff öffnen, z. B. qs ipc call launcher find ":herz"
         function find(q: string): void { win.mode = "apps"; win.open = true; search.text = q }
     }
@@ -72,7 +82,7 @@ PanelWindow {
         preload: false
     }
     // außerhalb der results-Bindung laden, sonst Bindungsschleife
-    onQueryChanged: if (query.trim().startsWith(":")) loadEmojis()
+    onQueryChanged: { if (query.trim().startsWith(":")) loadEmojis(); if (mode === "online") onlineDebounce.restart() }
     function loadEmojis() {
         if (emojis.length) return
         emojis = emojiFile.text().split("\n").filter(Boolean).map(l => { const [e, n, k] = l.split("\t"); return { e, n, k: (n + " " + (k ?? "")).toLowerCase() } })
@@ -189,6 +199,56 @@ PanelWindow {
         Quickshell.execDetached([Quickshell.env("HOME") + "/.local/bin/wallthemes", w.path])
     }
 
+    // ── Online (wallhaven.cc) ─────────────────────────────────────────────────
+    property var online: []
+    property int onlinePage: 1
+    property int onlineLast: 1
+    property string onlineQuery: ""
+    property string onlineError: ""
+    property string downloading: ""        // id des Bildes, das gerade lädt
+    Timer { id: onlineDebounce; interval: 600; onTriggered: win.searchOnline(true) }
+    function searchOnline(fresh) {
+        if (onlineProc.running) return
+        if (fresh) { onlinePage = 1; onlineQuery = query.trim() }
+        else if (onlinePage >= onlineLast) return
+        else onlinePage += 1
+        onlineProc.fresh = fresh
+        onlineProc.command = ["python3", "-I", Quickshell.shellDir + "/scripts/wallhaven.py", "search", onlineQuery, String(onlinePage)]
+        onlineProc.running = true
+    }
+    Process {
+        id: onlineProc
+        property bool fresh: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const d = JSON.parse(text)
+                    win.onlineError = d.error ? "wallhaven nicht erreichbar" : ""
+                    win.online = onlineProc.fresh ? d.items : win.online.concat(d.items)
+                    win.onlineLast = d.lastPage ?? 1
+                    if (onlineProc.fresh) onlineGrid.currentIndex = 0
+                } catch (e) { win.onlineError = "Antwort unlesbar" }
+            }
+        }
+    }
+    function fetchWall(w) {
+        if (!w || dlProc.running) return
+        downloading = w.id
+        dlProc.command = ["python3", "-I", Quickshell.shellDir + "/scripts/wallhaven.py", "get", w.id, w.full]
+        dlProc.running = true
+    }
+    Process {
+        id: dlProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const path = text.trim()
+                win.downloading = ""
+                if (path) { win.open = false; Quickshell.execDetached([Quickshell.env("HOME") + "/.local/bin/wallthemes", path]) }
+            }
+        }
+        onExited: code => { if (code !== 0) { win.downloading = ""; Quickshell.execDetached(["notify-send", "-a", "Wallpaper", "Download fehlgeschlagen", "wallhaven.cc"]) } }
+    }
+
     // ── Oberfläche ────────────────────────────────────────────────────────────
     Rectangle {
         id: frame
@@ -210,14 +270,14 @@ PanelWindow {
                 Layout.fillWidth: true
                 spacing: 10
                 Repeater {
-                    model: [{ m: "apps", t: "󰀻  Apps" }, { m: "wallpapers", t: "󰸉  Wallpaper" }]
+                    model: [{ m: "apps", t: "󰀻  Apps" }, { m: "wallpapers", t: "󰸉  Wallpaper" }, { m: "online", t: "󰖟  Online" }]
                     delegate: Rectangle {
                         required property var modelData
                         readonly property bool on: win.mode === modelData.m
                         implicitWidth: tabTxt.implicitWidth + 24; implicitHeight: 30; radius: 10
                         color: on ? Theme.primary : (tabMouse.containsMouse ? Theme.surfaceContainerHighest : "transparent")
                         Text { id: tabTxt; anchors.centerIn: parent; text: modelData.t; color: parent.on ? Theme.fgOnPrimary : Theme.fgMuted; font.family: Theme.fontUi; font.pixelSize: Theme.fontPx }
-                        MouseArea { id: tabMouse; anchors.fill: parent; hoverEnabled: true; onClicked: { win.mode = modelData.m; if (modelData.m === "wallpapers") wallProc.running = true; search.forceActiveFocus() } }
+                        MouseArea { id: tabMouse; anchors.fill: parent; hoverEnabled: true; onClicked: { win.mode = modelData.m; if (modelData.m === "wallpapers") wallProc.running = true; if (modelData.m === "online") win.searchOnline(true); search.forceActiveFocus() } }
                     }
                 }
                 Item { Layout.fillWidth: true }
@@ -243,23 +303,25 @@ PanelWindow {
                         font.family: Theme.fontUi; font.pixelSize: Theme.fontPx + 2
                         onTextChanged: { win.query = text; list.currentIndex = 0; grid.currentIndex = 0 }
                         Keys.onPressed: e => {
-                            const inGrid = win.mode === "wallpapers"
+                            const inGrid = win.mode !== "apps"
+                            const g = win.mode === "online" ? onlineGrid : grid
                             if (e.key === Qt.Key_Escape) { win.open = false }
-                            else if (e.key === Qt.Key_Tab) { win.mode = inGrid ? "apps" : "wallpapers"; if (!inGrid) wallProc.running = true }
+                            else if (e.key === Qt.Key_Tab) win.nextMode()
                             else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
-                                inGrid ? win.applyWall(win.shownWalls[grid.currentIndex]) : win.activate(win.results[list.currentIndex])
+                                win.mode === "online" ? win.fetchWall(win.online[onlineGrid.currentIndex])
+                                    : inGrid ? win.applyWall(win.shownWalls[grid.currentIndex]) : win.activate(win.results[list.currentIndex])
                             }
-                            else if (e.key === Qt.Key_Down) inGrid ? grid.moveCurrentIndexDown() : list.incrementCurrentIndex()
-                            else if (e.key === Qt.Key_Up) inGrid ? grid.moveCurrentIndexUp() : list.decrementCurrentIndex()
-                            else if (inGrid && e.key === Qt.Key_Right && !search.text) grid.moveCurrentIndexRight()
-                            else if (inGrid && e.key === Qt.Key_Left && !search.text) grid.moveCurrentIndexLeft()
+                            else if (e.key === Qt.Key_Down) inGrid ? g.moveCurrentIndexDown() : list.incrementCurrentIndex()
+                            else if (e.key === Qt.Key_Up) inGrid ? g.moveCurrentIndexUp() : list.decrementCurrentIndex()
+                            else if (inGrid && e.key === Qt.Key_Right && !search.text) g.moveCurrentIndexRight()
+                            else if (inGrid && e.key === Qt.Key_Left && !search.text) g.moveCurrentIndexLeft()
                             else return
                             e.accepted = true
                         }
                         Text {
                             visible: !search.text
                             anchors.verticalCenter: parent.verticalCenter
-                            text: win.mode === "wallpapers" ? "Wallpaper suchen …" : "Apps, 12*3, :emoji, >befehl, g websuche …"
+                            text: win.mode === "wallpapers" ? "Wallpaper suchen …" : win.mode === "online" ? "wallhaven.cc durchsuchen (leer = Toplist des Monats) …" : "Apps, 12*3, :emoji, >befehl, g websuche …"
                             color: Theme.fgMuted
                             font: search.font
                         }
@@ -354,6 +416,62 @@ PanelWindow {
                         horizontalAlignment: Text.AlignHCenter
                     }
                     MouseArea { anchors.fill: parent; hoverEnabled: true; onEntered: grid.currentIndex = cell.index; onClicked: win.applyWall(cell.modelData) }
+                }
+            }
+
+            // Online-Raster (wallhaven.cc)
+            GridView {
+                id: onlineGrid
+                visible: win.mode === "online"
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                clip: true
+                cellWidth: Math.floor(width / 4)
+                cellHeight: cellWidth * 9 / 16 + 28
+                model: ScriptModel { values: win.online; objectProp: "id" }
+                highlightMoveDuration: 80
+                // beim Herunterscrollen nächste Seite laden
+                onAtYEndChanged: if (atYEnd && win.online.length) win.searchOnline(false)
+                delegate: Item {
+                    id: oc
+                    required property var modelData
+                    required property int index
+                    readonly property bool sel: GridView.isCurrentItem
+                    readonly property bool loading: win.downloading === modelData.id
+                    width: onlineGrid.cellWidth
+                    height: onlineGrid.cellHeight
+                    ClippingRectangle {
+                        id: opic
+                        anchors { left: parent.left; right: parent.right; top: parent.top; margins: 5 }
+                        height: width * 9 / 16
+                        radius: 10
+                        color: Theme.surfaceContainerHigh
+                        border.width: oc.sel ? 3 : 0
+                        border.color: Theme.primary
+                        Image { id: oimg; anchors.fill: parent; source: oc.modelData.thumb; fillMode: Image.PreserveAspectCrop; asynchronous: true }
+                        Text { anchors.centerIn: parent; visible: oimg.status !== Image.Ready && !oc.loading; text: "󰋩"; color: Theme.outline; font.family: Theme.fontUi; font.pixelSize: 22 }
+                        Rectangle {
+                            visible: oc.loading
+                            anchors.fill: parent
+                            color: Qt.alpha(Theme.scrim, 0.55)
+                            Text { anchors.centerIn: parent; text: "󰇚  lädt …"; color: "white"; font.family: Theme.fontUi; font.pixelSize: 13; font.bold: true }
+                        }
+                    }
+                    Text {
+                        anchors { top: opic.bottom; topMargin: 3; left: opic.left; right: opic.right }
+                        text: oc.modelData.res + "  ·  " + (oc.modelData.size / 1048576).toFixed(1) + " MB"
+                        color: oc.sel ? Theme.primary : Theme.fgMuted
+                        font.family: Theme.fontUi; font.pixelSize: 10
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    MouseArea { anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onEntered: onlineGrid.currentIndex = oc.index; onClicked: win.fetchWall(oc.modelData) }
+                }
+                Text {
+                    anchors.centerIn: parent
+                    visible: onlineGrid.count === 0
+                    text: win.onlineError || (onlineProc.running ? "Suche auf wallhaven.cc …" : "Nichts gefunden")
+                    color: win.onlineError ? Theme.error : Theme.fgMuted
+                    font.family: Theme.fontUi; font.pixelSize: Theme.fontPx
                 }
             }
         }
