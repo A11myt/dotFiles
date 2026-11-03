@@ -31,6 +31,7 @@ Nicht gestowt:
 |---|---|
 | `system/` | Dateien für `/etc` (greetd + ReGreet-Login, PAM-Keyring-Unlock, Akku-Ladegrenzen, Timeshift) – `install.sh --system` |
 | `packages/` | `pkglist.txt` (Repos), `aur.txt`, `flatpak.txt` |
+| `windows/wintheme/` | **Matugen für Windows 11**: Windows-Akzentfarbe, Windows Terminal, VS Code aus dem Wallpaper – Anleitung im Ordner |
 | `hooks/` | `pre-commit`: Secret-Check (Repo ist öffentlich) – blockiert u. a. Tokens, Schlüssel, private Kalender-Adressen |
 
 ## Oberfläche (Quickshell)
