@@ -61,7 +61,7 @@ Singleton {
     readonly property var barInfo: ({
         weather:   "Wetter", media: "Medien (Mitte)", updates: "Updates", privacy: "Mikrofon-Warnung",
         volume:    "Lautstärke", bluetooth: "Bluetooth", battery: "Akku", network: "WLAN",
-        powerProfile: "Energieprofil", focus: "Fokus-Timer", mail: "Ungelesene Mails"
+        powerProfile: "Energieprofil", focus: "Fokus-Timer", mail: "Ungelesene Mails", tray: "Infobereich (Tray)"
     })
 
     function set(key, value) { data[key] = value }

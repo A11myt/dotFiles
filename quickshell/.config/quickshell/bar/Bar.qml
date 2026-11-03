@@ -39,6 +39,7 @@ PanelWindow {
         RecordingPill {}
         FocusPill { barKey: "focus" }
         MailPill { barKey: "mail" }
+        Tray { barKey: "tray" }
         Updates { barKey: "updates" }
         Privacy { barKey: "privacy" }
         Volume { barKey: "volume" }
