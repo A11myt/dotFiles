@@ -107,6 +107,8 @@ alias jrun='./gradlew build -q && java -cp app/build/classes/java/main'
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# Prompt aus Theme Studio (Ergänzung; fehlt die Datei, bleibt ~/.p10k.zsh unverändert)
+[[ ! -f ~/.config/theme-studio/p10k.zsh ]] || source ~/.config/theme-studio/p10k.zsh
 # nvm erst beim ersten Aufruf laden (spart ~1 s pro Terminal).
 # Die Default-Node-Version liegt trotzdem sofort im PATH (node/npm, Mason-LSPs in nvim).
 export NVM_DIR="$HOME/.nvm"
