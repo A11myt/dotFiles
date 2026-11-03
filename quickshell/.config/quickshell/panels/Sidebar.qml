@@ -786,6 +786,7 @@ PanelWindow {
         Card {
             readonly property var player: Mpris.players.values.find(p => p.isPlaying) ?? Mpris.players.values[0] ?? null
             Small { visible: parent.player === null; text: "󰝚  Nichts wird abgespielt" }
+            Visualizer { visible: parent.player?.isPlaying ?? false; Layout.fillWidth: true; Layout.preferredHeight: 30; mirror: true }
             RowLayout {
                 visible: parent.player !== null
                 Layout.fillWidth: true

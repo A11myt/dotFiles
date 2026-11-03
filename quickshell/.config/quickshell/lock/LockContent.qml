@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Services.UPower
 import Quickshell.Services.Mpris
 import qs
+import qs.components
 
 // Oberfläche des Sperrbildschirms (pro Bildschirm): unscharfes Wallpaper, Uhr, Datum,
 // Wetter, Akku, Medien, Passwortfeld. Tasteneingabe geht an lock.type().
@@ -157,6 +158,15 @@ Item {
             color: Theme.fg; opacity: 0.6
             font.family: Theme.fontUi; font.pixelSize: 13
         }
+    }
+
+    // ── Visualizer über der Medienkarte ──
+    Visualizer {
+        visible: media.visible && (media.player?.isPlaying ?? false)
+        anchors { horizontalCenter: parent.horizontalCenter; bottom: media.top; bottomMargin: 14 }
+        width: 420; height: 60
+        mirror: true
+        color: Qt.alpha(Theme.primary, 0.9)
     }
 
     // ── Medien ──

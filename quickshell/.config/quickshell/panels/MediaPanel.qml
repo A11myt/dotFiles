@@ -94,6 +94,14 @@ DropPanel {
         }
     }
 
+    // Visualizer (nur solange etwas läuft)
+    Visualizer {
+        visible: root.player?.isPlaying ?? false
+        Layout.fillWidth: true
+        Layout.preferredHeight: 42
+        mirror: true
+    }
+
     // Fortschritt
     ColumnLayout {
         visible: root.player !== null && (root.player?.lengthSupported ?? false) && (root.player?.length ?? 0) > 0

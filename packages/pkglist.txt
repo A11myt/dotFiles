@@ -12,6 +12,7 @@ bluez
 bluez-utils
 brightnessctl
 btop
+cava
 cliphist
 conky
 cpio
