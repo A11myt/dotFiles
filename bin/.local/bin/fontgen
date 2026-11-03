@@ -5,6 +5,8 @@
   fontgen use <profil>  Profil aktivieren und anwenden
   fontgen list          Profile anzeigen, prüfen ob die Schriften installiert sind
   fontgen size <ui> <mono>  Schriftgrößen (pt) des aktiven Profils ändern und anwenden
+  fontgen define <name> <ui> <mono> <accent> <ui_size> <mono_size>
+                        Profil anlegen/ersetzen, aktivieren und anwenden (z. B. aus Theme Studio)
   fontgen state         Profile, aktives Profil und Größen als JSON (für die Einstellungen)
 
 Konfiguration: ~/.config/fontgen/config.toml
@@ -166,6 +168,27 @@ def size(ui: str, mono: str) -> int:
     return apply(tomllib.loads(text))
 
 
+def define(name: str, ui: str, mono: str, accent: str, ui_size: str, mono_size: str) -> int:
+    """Profil [profiles.<name>] anlegen oder ersetzen (Rest der Datei bleibt), dann aktivieren."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9_-]{0,40}", name):
+        print(f"fontgen: ungültiger Profilname '{name}'", file=sys.stderr)
+        return 2
+    fmt = lambda v: (lambda f: str(int(f)) if f == int(f) else str(f))(max(6.0, min(24.0, float(v))))
+    q = lambda v: json.dumps(v, ensure_ascii=False)        # TOML-Strings = JSON-Strings
+    block = (f"[profiles.{name}]\nui        = {q(ui)}\nmono      = {q(mono)}\naccent    = {q(accent)}\n"
+             f"ui_size   = {fmt(ui_size)}\nmono_size = {fmt(mono_size)}\n\n")
+    text = CONFIG.read_text()
+    m = re.search(rf'(?ms)^\[profiles\.{re.escape(name)}\]\n.*?(?=^\[|\Z)', text)
+    if m:
+        text = text[:m.start()] + block + text[m.end():]
+    else:   # vor den Templates einfügen, sonst ans Ende
+        t = re.search(r'(?m)^# ── Templates|^\[templates\.', text)
+        text = text[:t.start()] + block + text[t.start():] if t else text.rstrip() + "\n\n" + block
+    tomllib.loads(text)                                     # bleibt gültiges TOML?
+    CONFIG.write_text(text)
+    return use(name)
+
+
 def state(cfg: dict) -> int:
     have = installed_families()
     print(json.dumps({
@@ -205,6 +228,8 @@ def main(argv: list[str]) -> int:
         return state(cfg)
     if argv[0] == "size" and len(argv) == 3:
         return size(argv[1], argv[2])
+    if argv[0] == "define" and len(argv) == 7:
+        return define(*argv[1:])
     print(__doc__.strip(), file=sys.stderr)
     return 1
 

@@ -3,6 +3,11 @@
 
   wallthemes <bild>            Theme anwenden (aus dem Cache, sonst einmal rendern)
   wallthemes <bild> --refresh  Cache für dieses Bild neu rendern
+  wallthemes [<bild>] --color <#hex> [--scheme S] [--mode dark|light] [--contrast C]
+                    [--override rolle=#hex …]
+                               Theme mit fester Ausgangsfarbe (z. B. aus Theme Studio) anwenden;
+                               Überschreibungen einzelner Farben gelten für dieses Bild
+                               (ohne Bild: aktuelles Wallpaper)
   wallthemes build             Cache für alle Bilder in ~/Pictures/wallpapers vorrendern
   wallthemes clean             Caches entfernen, deren Bild nicht mehr existiert
   wallthemes list              Gecachte Wallpaper anzeigen
@@ -30,6 +35,7 @@ import math
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -73,13 +79,36 @@ def matugen_args(image: Path) -> list[str]:
         args += ["--contrast", str(float(m["contrast"]))]
     pick = r.get("pick", {}).get(image.name)
     source = m.get("source", "dominant")
-    if isinstance(pick, int):
+    if isinstance(pick, str):    # feste Farbe → Quelle ist „color hex“, siehe source_args()
+        pass
+    elif isinstance(pick, int):
         args += ["--source-color-index", str(pick)]
     elif source == "dominant":   # häufigste Farbe im Bild
         args += ["--source-color-index", "0"]
     else:                        # --prefer value/saturation/…
         args += ["--prefer", source]
     return args
+
+
+HEX = re.compile(r"#[0-9a-fA-F]{6}")
+
+
+def source_args(image: Path) -> list[str]:
+    """matugen-Quelle: das Bild – oder eine feste Farbe aus [pick] (z. B. aus Theme Studio)."""
+    pick = rules().get("pick", {}).get(image.name)
+    if isinstance(pick, str) and HEX.fullmatch(pick):
+        return ["color", "hex", pick]
+    return ["image", str(image)]
+
+
+def overrides(image: Path) -> dict[str, str]:
+    """Überschriebene Farben für dieses Bild ([override] in wallthemes.toml, JSON-Text je Bild)."""
+    raw = rules().get("override", {}).get(image.name)
+    try:
+        d = json.loads(raw) if isinstance(raw, str) else {}
+    except ValueError:
+        return {}
+    return {k: v for k, v in d.items() if re.fullmatch(r"[a-z_]+", k) and isinstance(v, str) and HEX.fullmatch(v)}
 
 
 def log(level: str, msg: str) -> None:
@@ -109,6 +138,8 @@ def stamp_for(image: Path, cfg: dict) -> str:
     version = subprocess.run(["matugen", "--version"], capture_output=True, text=True).stdout
     h.update(version.encode())
     h.update(" ".join(matugen_args(image)).encode())
+    h.update(" ".join(source_args(image)).encode())
+    h.update(json.dumps(overrides(image), sort_keys=True).encode())
     return h.hexdigest()
 
 
@@ -130,8 +161,24 @@ def render(image: Path, cfg: dict, target: Path, stamp: str) -> None:
         cfg_file.write_text("\n".join(lines))
 
         files = tmp / "files"
+        source = source_args(image)
+        over = overrides(image)
+        if over:
+            # 1) volle Palette berechnen (ohne Dateien), 2) Farben ersetzen, 3) Vorlagen damit füllen
+            r = subprocess.run(["matugen", *source, *matugen_args(image), "-c", str(cfg_file),
+                                "--prefix", str(tmp / "dry"), "--json", "hex"], capture_output=True, text=True)
+            if r.returncode != 0:
+                raise RuntimeError(f"matugen fehlgeschlagen: {r.stderr.strip()[-500:]}")
+            pal = json.loads(r.stdout[r.stdout.find("{"):])
+            for role, hexv in over.items():
+                if role in pal.get("colors", {}):
+                    for variant in ("default", mode()):
+                        pal["colors"][role][variant] = {"color": hexv.lower()}
+            (tmp / "palette.json").write_text(json.dumps(pal))
+            shutil.rmtree(tmp / "dry", ignore_errors=True)
+            source = ["json", str(tmp / "palette.json")]
         r = subprocess.run(
-            ["matugen", "image", str(image), *matugen_args(image),
+            ["matugen", *source, *matugen_args(image),
              "-c", str(cfg_file), "--prefix", str(files), "--json", "hex"],
             capture_output=True, text=True,
         )
@@ -418,6 +465,22 @@ def source_colors(image: Path) -> list[str]:
     return [l.strip() for l in r.stdout.splitlines() if l.strip().startswith("#")][:4]
 
 
+def comment_start(line: str) -> int | None:
+    """Position eines TOML-Kommentars (#) außerhalb von Anführungszeichen – "#db79a9" ist keiner."""
+    quote = None
+    for i, ch in enumerate(line):
+        if quote:
+            if ch == "\\" and quote == '"':
+                continue
+            if ch == quote and line[i - 1] != "\\":
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "#":
+            return i
+    return None
+
+
 def edit_rules(section: str, key: str, value) -> None:
     """Setzt key = value in [section] von wallthemes.toml, Kommentare bleiben erhalten.
     value None entfernt den Eintrag."""
@@ -434,7 +497,8 @@ def edit_rules(section: str, key: str, value) -> None:
         keys = (key, json.dumps(key))
         idx = next((i for i in range(start + 1, end) if lines[i].split("=")[0].strip() in keys), None)
         if idx is not None:
-            comment = lines[idx][lines[idx].index("#"):] if "#" in lines[idx].split("=", 1)[1] else ""
+            cpos = comment_start(lines[idx])
+            comment = lines[idx][cpos:] if cpos is not None else ""
             if line is None:
                 del lines[idx]
             else:
@@ -492,6 +556,7 @@ def pick(value: str) -> int:
     if not img:
         return 1
     edit_rules("pick", img.name, None if value == "auto" else max(0, min(3, int(value))))
+    edit_rules("override", img.name, None)      # Studio-Überschreibungen gehören zur Studio-Farbe
     return recolor()
 
 
@@ -518,11 +583,46 @@ def main(argv: list[str]) -> int:
         return recolor()
     if cmd == "auto":
         return auto(argv[1] if len(argv) > 1 else None)
-    image = Path(cmd).expanduser()
-    if not image.is_file():
-        log("ERROR", f"Bild nicht gefunden: {image}")
+    image = current_image() if cmd.startswith("--") else Path(cmd).expanduser()
+    if not image or not image.is_file():
+        log("ERROR", f"Bild nicht gefunden: {image or 'kein aktuelles Wallpaper'}")
         return 1
-    return apply(image.resolve(), refresh="--refresh" in argv)
+    image = image.resolve()
+    if "--color" in argv:
+        rc = studio_options(image, argv)
+        if rc:
+            return rc
+    return apply(image, refresh="--refresh" in argv)
+
+
+def studio_options(image: Path, argv: list[str]) -> int:
+    """--color/--scheme/--mode/--contrast/--override übernehmen (dauerhaft, wie wallthemes set/pick)."""
+    opts: dict[str, str] = {}
+    over: dict[str, str] = {}
+    it = iter(argv)
+    for a in it:
+        if a in ("--color", "--scheme", "--mode", "--contrast"):
+            opts[a[2:]] = next(it, "")
+        elif a == "--override":
+            role, _, val = next(it, "").partition("=")
+            if not (re.fullmatch(r"[a-z_]+", role) and HEX.fullmatch(val)):
+                log("ERROR", f"--override erwartet rolle=#rrggbb, nicht {role}={val}")
+                return 2
+            over[role] = val.lower()
+    if not HEX.fullmatch(opts.get("color", "")):
+        log("ERROR", f"--color erwartet #rrggbb, nicht {opts.get('color')}")
+        return 2
+    if "scheme" in opts and opts["scheme"] not in SCHEMES or "mode" in opts and opts["mode"] not in ("dark", "light"):
+        log("ERROR", f"ungültig: scheme={opts.get('scheme')} mode={opts.get('mode')}")
+        return 2
+    for key in ("scheme", "mode"):
+        if key in opts:
+            edit_rules("matugen", key, opts[key])
+    if "contrast" in opts:
+        edit_rules("matugen", "contrast", max(-1.0, min(1.0, float(opts["contrast"]))))
+    edit_rules("pick", image.name, opts["color"].lower())
+    edit_rules("override", image.name, json.dumps(over, sort_keys=True) if over else None)
+    return 0
 
 
 if __name__ == "__main__":
