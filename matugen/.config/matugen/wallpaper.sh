@@ -1,5 +1,5 @@
 #!/bin/bash
-source "$HOME/.config/scripts/log.sh"
+LOG_TOOL=wallpaper source "$HOME/.config/scripts/log.sh"
 
 if [[ -z "$1" ]]; then
     log_error "no wallpaper path given"

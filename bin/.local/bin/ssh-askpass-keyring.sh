@@ -6,7 +6,7 @@
 # Schutz gegen Endlosschleife: ssh-add fragt bei falscher Passphrase immer wieder.
 # Zweiter Aufruf für denselben Key innerhalb von 30 s → Keyring-Wert war falsch → Zenity.
 # Leere Eingabe/Abbruch in Zenity beendet ssh-add.
-source "$HOME/.config/scripts/log.sh"
+LOG_TOOL=ssh-askpass source "$HOME/.config/scripts/log.sh"
 
 key="$(sed -n 's/^Enter passphrase for \(.*\): *$/\1/p' <<<"$1")"
 key="${key:-$HOME/.ssh/id_ed25519}"
