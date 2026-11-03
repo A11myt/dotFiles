@@ -1,0 +1,11 @@
+#!/bin/sh
+# logrun <name> <befehl …> – Befehl starten, Ausgabe nach ~/.logs/<name>.log anhängen.
+# Ist das Log größer als 1 MB, wird es vorher zu <name>.log.1 (eine alte Kopie bleibt, mehr nicht).
+[ $# -ge 2 ] || { echo "logrun <name> <befehl …>" >&2; exit 2; }
+name=$1; shift
+dir="$HOME/.logs"; log="$dir/$name.log"
+mkdir -p "$dir"
+if [ -f "$log" ] && [ "$(stat -c%s "$log")" -gt 1048576 ]; then
+  mv -f "$log" "$log.1"
+fi
+exec "$@" >> "$log" 2>&1
