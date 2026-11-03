@@ -86,3 +86,11 @@ hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = tr
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })   -- Pause
 hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })   -- Wiedergabe/Pause
 hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })   -- vorheriger Titel
+
+-- ── Touchpad-Gesten ──
+-- @ 3 Finger ← → | Arbeitsfläche wechseln (zieht mit)
+hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
+-- @ 3 Finger ↑ | Fensterübersicht
+hl.gesture({ fingers = 3, direction = "up", action = function() hl.exec_cmd("qs ipc call overview toggle") end })
+-- @ 3 Finger ↓ | Dashboard
+hl.gesture({ fingers = 3, direction = "down", action = function() hl.exec_cmd("qs ipc call sidebar toggle") end })
