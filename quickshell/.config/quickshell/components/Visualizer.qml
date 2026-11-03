@@ -29,7 +29,8 @@ Item {
                 width: (vis.width - vis.gap * (Cava.bars - 1)) / Cava.bars
                 height: vis.height
                 readonly property int src: vis.mirror ? Math.abs(index - (Cava.bars - 1) / 2) * 2 | 0 : index
-                readonly property real v: Cava.values[Math.min(src, Cava.bars - 1)] ?? 0
+                // Wurzelkurve: kleine Ausschläge sichtbarer (Sprache, leise Stellen)
+                readonly property real v: Math.pow(Cava.values[Math.min(src, Cava.bars - 1)] ?? 0, 0.6)
                 Rectangle {
                     anchors.bottom: parent.bottom
                     width: parent.width
