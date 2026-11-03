@@ -2,10 +2,11 @@
 Description=Hell/Dunkel nach Sonnenstand prüfen (schaltet nur bei Auf-/Untergang)
 
 [Timer]
-OnStartupSec=20s
+# frühestens 1 min nach dem Login (Hyprland und Quickshell sind dann bereit),
+# danach alle 5 min; verpasste Läufe NICHT beim Start nachholen (kein Persistent)
+OnStartupSec=1min
 OnCalendar=*:0/5
-AccuracySec=1min
-Persistent=true
+AccuracySec=30s
 
 [Install]
 WantedBy=timers.target

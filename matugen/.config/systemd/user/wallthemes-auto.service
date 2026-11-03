@@ -1,7 +1,11 @@
 [Unit]
 Description=Hell/Dunkel nach Sonnenstand (wallthemes auto)
+# erst, wenn die Hyprland-Sitzung läuft (sonst scheitert z. B. hyprctl reload mitten im Start)
+After=graphical-session.target
 
 [Service]
 Type=oneshot
+# Hyprland noch nicht erreichbar → diesen Lauf überspringen (kein Fehler)
+ExecCondition=/bin/sh -c 'hyprctl -j version >/dev/null 2>&1 || exit 1'
 ExecStart=%h/.local/bin/wallthemes auto
 Nice=10
