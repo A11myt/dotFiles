@@ -19,6 +19,9 @@ Singleton {
     // cava vorhanden?
     Process { id: avail; property int code: -1; command: ["sh", "-c", "command -v cava"]; running: true; onExited: c => code = c }
 
+    // nachträglich installiert? beim nächsten Bedarf erneut prüfen
+    onUsersChanged: if (users > 0 && !available && !avail.running) avail.running = true
+
     onActiveChanged: {
         if (active) { writeConf.running = true }
         else { proc.running = false; values = [] }
