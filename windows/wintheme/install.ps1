@@ -3,12 +3,15 @@
 
   .\install.ps1              installieren / aktualisieren
   .\install.ps1 -NoWatch     ohne Autostart (kein automatisches Einfärben beim Wallpaper-Wechsel)
-  .\install.ps1 -Uninstall   alles wieder entfernen (Windows-Farben bleiben, wie sie sind)
+  .\install.ps1 -Uninstall   Originalfarben wiederherstellen und alles entfernen
+  .\install.ps1 -Uninstall -KeepColors   entfernen, aktuelle Farben behalten
+
+  Rückgängig ohne Deinstallieren:  wintheme --undo   ·   wintheme --original   ·   wintheme --history
 
   Danach:  wintheme C:\Pfad\bild.jpg   – oder im Explorer Rechtsklick auf ein Bild
            → „Weitere Optionen anzeigen“ → „Als Hintergrund mit Farben (wintheme)“
 #>
-param([switch]$NoWatch, [switch]$Uninstall)
+param([switch]$NoWatch, [switch]$Uninstall, [switch]$KeepColors)
 $ErrorActionPreference = 'Stop'
 
 $Dest    = Join-Path $env:LOCALAPPDATA 'wintheme'
@@ -19,6 +22,11 @@ $Startup = Join-Path ([Environment]::GetFolderPath('Startup')) 'wintheme-watch.l
 if ($Uninstall) {
     Get-Process pythonw -ErrorAction SilentlyContinue |
         Where-Object { $_.Path -like "$Dest*" } | Stop-Process -Force
+    $vpy = Join-Path $Dest 'venv\Scripts\python.exe'
+    if (-not $KeepColors -and (Test-Path $vpy)) {
+        Write-Host 'Stelle den Zustand vor der ersten Benutzung wieder her …'
+        & $vpy (Join-Path $Dest 'wintheme.py') --original
+    }
     Remove-Item -Recurse -Force $Dest, $Shim, $Startup -ErrorAction SilentlyContinue
     Remove-Item -Recurse -Force $MenuKey -ErrorAction SilentlyContinue
     Write-Host 'wintheme entfernt. Einstellungen bleiben in %APPDATA%\wintheme (bei Bedarf löschen).'

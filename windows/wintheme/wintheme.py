@@ -10,6 +10,9 @@
   wintheme --sources [bild]     die 4 Ausgangsfarben eines Bildes anzeigen
   wintheme --watch              im Hintergrund: bei jedem Wallpaper-Wechsel neu einfärben
   wintheme --dry-run            nur anzeigen, nichts ändern
+  wintheme --undo               letzten Schritt rückgängig (mehrmals = weiter zurück, bis 20)
+  wintheme --original           Zustand vor der allerersten Benutzung wiederherstellen
+  wintheme --history            gespeicherte Stände anzeigen
   wintheme --only windows,terminal,vscode   nur Teile anwenden
 
 Farbberechnung wie Matugen (Material You, Spezifikation 2021, Quantisierung auf 112 px):
@@ -17,6 +20,7 @@ gleiches Bild + gleiche Einstellungen → gleiche Farben wie auf dem Linux-Lapto
 Einstellungen: %APPDATA%\\wintheme\\config.json
 """
 import argparse
+import base64
 import json
 import os
 import re
@@ -36,6 +40,9 @@ HERE = Path(__file__).resolve().parent
 APPDATA = Path(os.environ.get("APPDATA", Path.home() / ".config"))
 LOCALAPPDATA = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local/share"))
 CONFIG = APPDATA / "wintheme" / "config.json"
+HISTORY = APPDATA / "wintheme" / "history"          # Stände vor jedem Einfärben (max. KEEP)
+ORIGINAL = APPDATA / "wintheme" / "original.json"   # Stand vor der allerersten Benutzung (nie überschrieben)
+KEEP = 20
 DEFAULTS = {"mode": "dark", "scheme": "tonal-spot", "contrast": 0.0, "pick": {}, "titlebars": False}
 
 SCHEMES = {
@@ -124,40 +131,75 @@ def current_wallpaper() -> Path | None:
     return t if t.is_file() else None
 
 
+# Registry-Werte, die wintheme ändert (für Sicherung und Rückgängig)
+ACCENT = r"Software\Microsoft\Windows\CurrentVersion\Explorer\Accent"
+DWM = r"Software\Microsoft\Windows\DWM"
+THEMES = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+DESKTOP = r"Control Panel\Desktop"
+REG_VALUES = [(ACCENT, "AccentPalette"), (ACCENT, "AccentColorMenu"), (ACCENT, "StartColorMenu"),
+              (DWM, "AccentColor"), (DWM, "ColorizationColor"), (DWM, "ColorizationAfterglow"), (DWM, "ColorPrevalence"),
+              (THEMES, "AppsUseLightTheme"), (THEMES, "SystemUsesLightTheme"), (DESKTOP, "AutoColorization")]
+
+
+def reg_get(path: str, name: str):
+    """→ (Wert, Typ) oder None, wenn es den Wert nicht gibt."""
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, path) as k:
+            return winreg.QueryValueEx(k, name)
+    except OSError:
+        return None
+
+
+def reg_set(path: str, name: str, kind: int, value) -> None:
+    import winreg
+    with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, path, 0, winreg.KEY_SET_VALUE) as k:
+        winreg.SetValueEx(k, name, 0, kind, value)
+
+
+def reg_del(path: str, name: str) -> None:
+    import winreg
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, path, 0, winreg.KEY_SET_VALUE) as k:
+            winreg.DeleteValue(k, name)
+    except OSError:
+        pass
+
+
+def set_wallpaper(image: Path) -> None:
+    import ctypes
+    ctypes.windll.user32.SystemParametersInfoW(20, 0, str(image), 3)   # SPI_SETDESKWALLPAPER, speichern + melden
+
+
+def broadcast() -> None:
+    """Allen Fenstern melden, dass sich Farben geändert haben (Taskleiste, Startmenü, Apps live)."""
+    import ctypes
+    res = ctypes.c_ulong()
+    for area in ("ImmersiveColorSet", "WindowsThemeElement"):
+        ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001A, 0, area, 0x0002, 3000, ctypes.byref(res))
+
+
 def apply_windows(pal: dict, image: Path | None, set_wall: bool, titlebars: bool, dry: bool) -> str:
     acc = pal["accent"]
     if dry or not IS_WIN:
         return f"Windows: Akzent {acc[3]}, {'dunkel' if pal['dark'] else 'hell'}" + (" (nur Vorschau)" if dry else " (nicht Windows – übersprungen)")
-    import ctypes
     import winreg
-    HK = winreg.HKEY_CURRENT_USER
-
-    def put(path, name, kind, value):
-        with winreg.CreateKeyEx(HK, path, 0, winreg.KEY_SET_VALUE) as k:
-            winreg.SetValueEx(k, name, 0, kind, value)
-
     if set_wall and image:
-        ctypes.windll.user32.SystemParametersInfoW(20, 0, str(image), 3)   # SPI_SETDESKWALLPAPER, speichern + melden
-    palette_bytes = b"".join(bytes([*rgb(c), 0]) for c in acc)
-    explorer = r"Software\Microsoft\Windows\CurrentVersion\Explorer\Accent"
-    put(explorer, "AccentPalette", winreg.REG_BINARY, palette_bytes)
-    put(explorer, "AccentColorMenu", winreg.REG_DWORD, abgr(acc[3]))
-    put(explorer, "StartColorMenu", winreg.REG_DWORD, abgr(acc[5]))
-    dwm = r"Software\Microsoft\Windows\DWM"
-    put(dwm, "AccentColor", winreg.REG_DWORD, abgr(acc[3]))
+        set_wallpaper(image)
     r, g, b = rgb(acc[3])
-    put(dwm, "ColorizationColor", winreg.REG_DWORD, (0xC4 << 24) | (r << 16) | (g << 8) | b)
-    put(dwm, "ColorizationAfterglow", winreg.REG_DWORD, (0xC4 << 24) | (r << 16) | (g << 8) | b)
-    put(dwm, "ColorPrevalence", winreg.REG_DWORD, 1 if titlebars else 0)
+    colorization = (0xC4 << 24) | (r << 16) | (g << 8) | b
     light = 0 if pal["dark"] else 1
-    themes = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
-    put(themes, "AppsUseLightTheme", winreg.REG_DWORD, light)
-    put(themes, "SystemUsesLightTheme", winreg.REG_DWORD, light)
-    put(r"Control Panel\Desktop", "AutoColorization", winreg.REG_DWORD, 0)   # Windows soll nicht selbst wählen
-    # allen Fenstern Bescheid geben (Taskleiste, Startmenü, Apps übernehmen es live)
-    res = ctypes.c_ulong()
-    for area in ("ImmersiveColorSet", "WindowsThemeElement"):
-        ctypes.windll.user32.SendMessageTimeoutW(0xFFFF, 0x001A, 0, area, 0x0002, 3000, ctypes.byref(res))
+    reg_set(ACCENT, "AccentPalette", winreg.REG_BINARY, b"".join(bytes([*rgb(c), 0]) for c in acc))
+    reg_set(ACCENT, "AccentColorMenu", winreg.REG_DWORD, abgr(acc[3]))
+    reg_set(ACCENT, "StartColorMenu", winreg.REG_DWORD, abgr(acc[5]))
+    reg_set(DWM, "AccentColor", winreg.REG_DWORD, abgr(acc[3]))
+    reg_set(DWM, "ColorizationColor", winreg.REG_DWORD, colorization)
+    reg_set(DWM, "ColorizationAfterglow", winreg.REG_DWORD, colorization)
+    reg_set(DWM, "ColorPrevalence", winreg.REG_DWORD, 1 if titlebars else 0)
+    reg_set(THEMES, "AppsUseLightTheme", winreg.REG_DWORD, light)
+    reg_set(THEMES, "SystemUsesLightTheme", winreg.REG_DWORD, light)
+    reg_set(DESKTOP, "AutoColorization", winreg.REG_DWORD, 0)      # Windows soll nicht selbst wählen
+    broadcast()
     return f"Windows: Akzent {acc[3]}, {'dunkel' if pal['dark'] else 'hell'}"
 
 
@@ -247,8 +289,7 @@ def render(template: str, colors: dict) -> str:
 
 
 def apply_vscode(pal: dict, dry: bool) -> str:
-    files = [APPDATA / d / "User/settings.json" for d in ("Code", "Code - Insiders", "VSCodium")]
-    files = [f for f in files if f.is_file()]
+    files = vscode_settings()
     if not files:
         return "VS Code: nicht gefunden – übersprungen"
     colors = json.loads(render((HERE / "templates/vscode-colors.json").read_text(encoding="utf-8"), pal["colors"]))
@@ -265,9 +306,100 @@ def apply_vscode(pal: dict, dry: bool) -> str:
     return f"VS Code: Farben gesetzt ({len(files)}×)" + (" (nur Vorschau)" if dry else "")
 
 
+# ── Sicherung / Rückgängig ───────────────────────────────────────────────────
+def vscode_settings() -> list[Path]:
+    return [f for f in (APPDATA / d / "User/settings.json" for d in ("Code", "Code - Insiders", "VSCodium")) if f.is_file()]
+
+
+def snapshot(label: str) -> dict:
+    """Aktueller Zustand aller Dinge, die wintheme ändert."""
+    snap = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "label": label, "registry": [], "files": {}, "wallpaper": None}
+    if IS_WIN:
+        for path, name in REG_VALUES:
+            got = reg_get(path, name)
+            if got is None:
+                snap["registry"].append({"path": path, "name": name, "missing": True})
+            else:
+                value, kind = got
+                if isinstance(value, bytes):
+                    value = {"b64": base64.b64encode(value).decode()}
+                snap["registry"].append({"path": path, "name": name, "kind": kind, "value": value})
+        wp = reg_get(DESKTOP, "WallPaper")
+        snap["wallpaper"] = wp[0] if wp else None
+    for f in terminal_settings() + vscode_settings():
+        snap["files"][str(f)] = f.read_text(encoding="utf-8-sig")
+    return snap
+
+
+def remember(label: str) -> None:
+    snap = snapshot(label)
+    HISTORY.mkdir(parents=True, exist_ok=True)
+    if not ORIGINAL.exists():
+        ORIGINAL.write_text(json.dumps(snap, ensure_ascii=False), encoding="utf-8")
+    (HISTORY / f"{time.time_ns()}.json").write_text(json.dumps(snap, ensure_ascii=False), encoding="utf-8")
+    for old in sorted(HISTORY.glob("*.json"))[:-KEEP]:
+        old.unlink()
+
+
+def restore(snap: dict) -> None:
+    if IS_WIN and snap["registry"]:
+        for e in snap["registry"]:
+            if e.get("missing"):
+                reg_del(e["path"], e["name"])          # gab es vorher nicht → wieder entfernen
+            else:
+                v = e["value"]
+                reg_set(e["path"], e["name"], e["kind"], base64.b64decode(v["b64"]) if isinstance(v, dict) else v)
+        if snap.get("wallpaper") and Path(snap["wallpaper"]).is_file():
+            set_wallpaper(Path(snap["wallpaper"]))
+        broadcast()
+    for path, text in snap["files"].items():
+        f = Path(path)
+        if f.parent.is_dir():
+            tmp = f.with_name(f.name + ".tmp")
+            tmp.write_text(text, encoding="utf-8")
+            os.replace(tmp, f)
+
+
+def undo() -> int:
+    steps = sorted(HISTORY.glob("*.json")) if HISTORY.exists() else []
+    if not steps:
+        print("wintheme: nichts mehr rückgängig zu machen")
+        return 1
+    snap = json.loads(steps[-1].read_text(encoding="utf-8"))
+    restore(snap)
+    steps[-1].unlink()
+    print(f"Rückgängig: Stand vor „{snap['label']}“ ({snap['time']}) wiederhergestellt · noch {len(steps) - 1} Schritt(e)")
+    return 0
+
+
+def original() -> int:
+    if not ORIGINAL.exists():
+        print("wintheme: kein Originalzustand gespeichert (wintheme wurde noch nie angewendet)")
+        return 1
+    remember("Original wiederherstellen")                # auch das lässt sich mit --undo zurücknehmen
+    snap = json.loads(ORIGINAL.read_text(encoding="utf-8"))
+    restore(snap)
+    print(f"Originalzustand von {snap['time']} wiederhergestellt (mit --undo zurücknehmbar)")
+    return 0
+
+
+def history() -> int:
+    steps = sorted(HISTORY.glob("*.json")) if HISTORY.exists() else []
+    if ORIGINAL.exists():
+        print(f"  Original: {json.loads(ORIGINAL.read_text(encoding='utf-8'))['time']}")
+    for i, f in enumerate(reversed(steps), 1):
+        d = json.loads(f.read_text(encoding="utf-8"))
+        print(f"  --undo ×{i}: Stand vor „{d['label']}“ ({d['time']})")
+    if not steps and not ORIGINAL.exists():
+        print("  noch keine Stände gespeichert")
+    return 0
+
+
 # ── Ablauf ───────────────────────────────────────────────────────────────────
 def run(image: Path, cfg: dict, set_wall: bool, only: set[str], dry: bool) -> None:
     pal = palette(image, cfg)
+    if not dry:
+        remember(f"{image.name} · {cfg['scheme']} · {cfg['mode']}")
     print(f"{image.name}: Ausgangsfarbe {pal['source']} · {cfg['scheme']} · {'dunkel' if pal['dark'] else 'hell'}")
     if "windows" in only:
         print("  " + apply_windows(pal, image, set_wall, cfg["titlebars"], dry))
@@ -305,7 +437,16 @@ def main() -> int:
     ap.add_argument("--sources", action="store_true")
     ap.add_argument("--watch", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--undo", action="store_true", help="letzten Schritt rückgängig")
+    ap.add_argument("--original", action="store_true", help="Zustand vor der ersten Benutzung")
+    ap.add_argument("--history", action="store_true", help="gespeicherte Stände anzeigen")
     a = ap.parse_args()
+    if a.undo:
+        return undo()
+    if a.original:
+        return original()
+    if a.history:
+        return history()
 
     cfg = load_config()
     changed = False

@@ -39,7 +39,19 @@ wintheme --dry-run                         # nur anzeigen, nichts ändern
 | Windows Terminal | `settings.json`: Schema „Matugen“, als Standard für alle Profile | `settings.json.wintheme-backup` beim ersten Lauf |
 | VS Code | `settings.json`: markierter Block `workbench.colorCustomizations` (nur für das aktive Theme) | Rest der Datei inkl. Kommentare bleibt unverändert |
 
-Einstellungen: `%APPDATA%\wintheme\config.json`. Entfernen: `install.ps1 -Uninstall`.
+## Rückgängig machen
+
+Vor jedem Einfärben merkt sich wintheme den bisherigen Zustand (Registry-Werte, Terminal- und
+VS-Code-Einstellungen, Wallpaper) – die letzten 20 Stände und einmalig den Zustand vor der ersten Benutzung.
+
+```powershell
+wintheme --undo        # letzten Schritt zurück (mehrmals = weiter zurück)
+wintheme --original    # wie vor der ersten Benutzung (lässt sich mit --undo wieder zurücknehmen)
+wintheme --history     # gespeicherte Stände
+```
+
+Entfernen: `install.ps1 -Uninstall` stellt vorher den Originalzustand wieder her
+(`-Uninstall -KeepColors` behält die aktuellen Farben). Einstellungen und Stände: `%APPDATA%\wintheme`.
 
 ## Pflege (auf dem Laptop)
 
