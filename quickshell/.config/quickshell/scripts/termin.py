@@ -45,6 +45,13 @@ def add(data: dict) -> int:
     if data.get("note"):
         lines += [data["note"].strip(), ""]
     FOLDER.mkdir(parents=True, exist_ok=True)
+    # gleicher Termin schon vorhanden (Titel, Datum, Beginn)? → nicht doppelt anlegen
+    for f in FOLDER.glob(f"{d.isoformat()} *.md"):
+        fm = frontmatter(f.read_text(errors="replace"))
+        same_time = (str(fm.get("startTime", "")) == ("" if all_day else data["start"]))
+        if fm.get("title") == title and str(fm.get("date", ""))[:10] == d.isoformat() and same_time:
+            print(f)
+            return 0
     base = f"{d.isoformat()} {safe_name(title)}"
     path, n = FOLDER / f"{base}.md", 2
     while path.exists():
