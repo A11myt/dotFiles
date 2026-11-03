@@ -25,6 +25,10 @@ nvim         = ["nvim", "godot"]
 folder-icons = ["nautilus"]
 
 [auto]
-enabled = true
+enabled = false
 lat = 49.66
 lon = 9.0
+
+[pick]
+"northbg.png" = 3
+"TrainWallpaper.jpg" = 0
