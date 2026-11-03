@@ -1,230 +1,38 @@
+# Hyprland (Lua-Config)
 
-# Hyprland – a11myt Configuration
+Hyprland 0.57 mit Lua-Konfiguration. Einstieg ist `hyprland.lua`, die übrigen Dateien werden von dort geladen.
+`hyprland.conf` ist nur ein Platzhalter, den Hyprland selbst anlegt.
 
-Diese Konfiguration ist Teil meines modularen Arch/Wayland-Setups.
-Fokus:
+| Datei | Inhalt |
+|---|---|
+| `hyprland.lua` | Einstieg: lädt die anderen Dateien, legt Monitore und Eingabe (Tastatur, Touchpad) fest |
+| `envvars.lua` | Umgebung (u. a. `PATH` mit `~/.local/bin` für Tastenkürzel, Qt/GTK-Themes) |
+| `monitors.lua` | Monitore ein-/ausstecken: Arbeitsflächen 2/3 folgen externen Bildschirmen |
+| `layout.lua` | Abstände, Rahmen, Unschärfe, Animationen, `misc` (siehe Hinweise) |
+| `rules.lua` | Fenster- und Ebenen-Regeln (Drop-down-Terminal, schwebende Fenster, Unschärfe hinter `qs-*`) |
+| `keybinds.lua` | alle Tastenkürzel – Abschnitte `-- ── Name ──`, Beschreibung als Kommentar hinter jedem `hl.bind` |
+| `autostart.lua` | Schlüsselbund, SSH-Agent, Polkit, hypridle, Quickshell, Wallpaper, Zwischenablage-Verlauf, Sitzung wiederherstellen |
+| `hypridle.conf` | dimmen → sperren (`~/.local/bin/lock`) → Bildschirm aus → Ruhezustand |
+| `hyprlock.conf` | Rückfall-Sperrbildschirm, falls Quickshell nicht bereit ist |
+| `themes/` | von Matugen/fontgen erzeugte Farben und Schriften (nicht versioniert) |
 
-* Master-Layout als produktiver Default
-* Subtile Blur- & Dim-Effekte
-* Kontrollierte Animationen
-* Klare Shortcut-Architektur
-* Reproduzierbare Dependencies
+## Tastenkürzel
 
----
+**SUPER+/** zeigt alle Kürzel als durchsuchbare Übersicht. Sie wird direkt aus `keybinds.lua` gelesen –
+neue Kürzel brauchen nur einen Kommentar hinter dem `hl.bind`, damit sie dort mit Beschreibung erscheinen:
 
-## 🎨 Look & Feel
-
-### General
-
-* Border size: 2px
-* Gaps in: 2
-* Gaps out: 5
-* Resize on border: enabled
-* Default layout: `master`
-* Tearing: enabled
-
-#### Border Colors
-
-* Active: `rgba(ffffffaa)`
-* Inactive: `rgba(2a2a2a88)`
-
-Ziel: ruhiger Kontrast ohne aggressive Akzentfarbe.
-
----
-
-### Decoration
-
-* Rounding: 10
-* Active opacity: 1
-* Inactive opacity: 0.98
-* Dim inactive: enabled (0.05)
-* Blur enabled
-* Blur size: 15
-* Passes: 3
-* Contrast: 0.8
-* Brightness: 1.2
-* Vibrancy: 0.1696
-
-#### Shadows
-
-* Enabled
-* Range: 12
-* Color: `rgba(12121244)`
-
-Fenster wirken wie Panels, nicht wie harte Kacheln.
-
----
-
-## 🎬 Animations
-
-Animations sind weich, aber nicht verspielt.
-
-Custom Bezier Curves:
-
-* easeOutQuint
-* easeInOutCubic
-* almostLinear
-* quick
-* linear
-
-Aktive Animationen:
-
-* windows
-* fade
-* border
-* workspaces (slidefade)
-* layers
-* popin transitions
-
-Kein Zoom-Overkill.
-Nur subtile Übergänge.
-
----
-
-## 🎯 Keybindings
-
-Main Modifier:
-
-```
-$mainMod = SUPER
+```lua
+-- ── Programme & Oberfläche ──
+hl.bind(mainMod .. " + Q", hl.dsp.exec_cmd(terminal))   -- Terminal
 ```
 
----
+Für Schleifen (Arbeitsflächen 1–10) gibt es die Form `-- @ TASTEN | Beschreibung`.
 
-### Core Applications
+## Hinweise
 
-| Shortcut         | Action       | Dependency                   |
-| ---------------- | ------------ | ---------------------------- |
-| SUPER + Q        | Terminal     | alacritty                    |
-| SUPER + E        | File Manager | thunar                       |
-| SUPER + R        | Launcher     | Quickshell                  |
-| SUPER + L        | Lock         | hyprlock                     |
-| SUPER + CTRL + O | Obsidian     | flatpak md.obsidian.Obsidian |
-
----
-
-### Window Management
-
-| Shortcut              | Action             |
-| --------------------- | ------------------ |
-| SUPER + C             | Kill active window |
-| SUPER + V             | Toggle floating    |
-| SUPER + F             | Fullscreen         |
-| SUPER + Arrow         | Move focus         |
-| SUPER + SHIFT + Arrow | Move window        |
-| SUPER + CTRL + Arrow  | Resize active      |
-| SUPER + Mouse Drag    | Move / Resize      |
-
----
-
-### Workspace Control
-
-* SUPER + 1–0 → Switch workspace
-* SUPER + SHIFT + 1–0 → Move window
-* SUPER + Scroll → Cycle workspaces
-
----
-
-### Layout Control
-
-| Shortcut  | Action         |
-| --------- | -------------- |
-| SUPER + P | Pseudotile     |
-| SUPER + O | Toggle split   |
-| SUPER + D | Toggle dwindle |
-
----
-
-### Screenshot
-
-Insert key:
-
-```bash
-grim -g "$(slurp)" ~/Pictures/screenshot_$(date +%s).png
-```
-
-Dependencies:
-
-* grim
-* slurp
-
----
-
-### Audio & Media
-
-Dependencies:
-
-* pipewire
-* wireplumber
-* wpctl
-* playerctl
-
-Shortcuts:
-
-* XF86AudioRaiseVolume
-* XF86AudioLowerVolume
-* XF86AudioMute
-* XF86AudioMicMute
-* XF86AudioNext
-* XF86AudioPrev
-* XF86AudioPlay
-
----
-
-### Brightness
-
-Dependency:
-
-* brightnessctl
-
----
-
-### Waybar Restart
-
-Shortcut:
-
-```
-SUPER + A
-```
-
-Executes:
-
-```bash
-~/.config/waybar/scripts/launch.sh
-```
-
----
-
-## 🎨 Color Tokens
-
-```ini
-$bg0 = #0f0f0f
-$bg1 = #151515
-$bg2 = #1a1a1a
-
-$fg0 = #ffffff
-$fg1 = #d0d0d0
-$fg2 = #9d9d9d
-
-$border = #2a2a2a
-$accent = #e9e9e9
-```
-
-Monochrome-first.
-Accent nur subtil für Hover / Active.
-
----
-
-## 📦 Required Packages
-
-```bash
-sudo pacman -S hyprland hyprlock hypridle
-sudo pacman -S quickshell            # Oberfläche: Leiste, Benachrichtigungen, Panels
-sudo pacman -S alacritty nautilus
-sudo pacman -S grim slurp wl-clipboard cliphist
-sudo pacman -S brightnessctl playerctl
-sudo pacman -S pipewire wireplumber
-yay -S matugen awww                  # Farben aus dem Wallpaper, Wallpaper-Daemon
-```
-
-Vollständige Listen: `packages/pkglist.txt` und `packages/aur.txt` im Repo-Wurzelverzeichnis.
+- **Absturz beim Standard-Wallpaper (0.57):** `force_default_wallpaper = 0` und `disable_hyprland_logo = true`
+  in `layout.lua` nicht zurücksetzen.
+- **`allow_session_lock_restore = true`:** stürzt der Sperrbildschirm ab, kann ein neuer übernehmen
+  (z. B. aus einer TTY: `hyprctl --instance 0 dispatch 'hl.dsp.exec_cmd("hyprlock")'`).
+- **Befehle aus Tastenkürzeln** laufen mit dem `PATH` aus `envvars.lua` – eigene Werkzeuge liegen in `~/.local/bin`.
+- **Prüfen nach Änderungen:** `hyprctl reload && hyprctl configerrors` (leer = gut), danach `dotdoctor`.

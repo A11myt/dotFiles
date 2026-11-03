@@ -3,8 +3,8 @@
 # Aktivieren: git config core.hooksPath hooks
 set -euo pipefail
 
-patterns='sk-(proj-)?[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AIza[0-9A-Za-z_-]{35}'
-forbidden='(^|/)(\.claude/|settings\.local\.json$|.*\.keyring$|id_(rsa|ed25519|ecdsa)$|\.env$|secrets\.zsh$)'
+patterns='sk-(proj-)?[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|AIza[0-9A-Za-z_-]{35}|calendar\.google\.com/calendar/ical/[^ "]*/private-|outlook\.(office365|live)\.com/owa/calendar/[^ "]+/reachcalendar'
+forbidden='(^|/)(\.claude/|settings\.local\.json$|.*\.keyring$|id_(rsa|ed25519|ecdsa)$|\.env$|secrets\.zsh$|calendars\.json$|mail\.json$)'
 
 fail=0
 while IFS= read -r -d '' f; do

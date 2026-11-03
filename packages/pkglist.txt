@@ -16,6 +16,7 @@ cliphist
 conky
 cpio
 cups
+curl
 dart-sass
 dkms
 docker
@@ -36,6 +37,7 @@ gradle
 greetd-regreet
 grim
 grub
+gtk-update-icon-cache
 gvfs
 gvfs-afc
 gvfs-gphoto2
@@ -55,6 +57,9 @@ jupyterlab
 lazygit
 less
 lib32-vulkan-intel
+libnotify
+libpulse
+libsecret
 linux
 linux-firmware
 linux-headers
@@ -83,7 +88,9 @@ postfix
 postgresql
 power-profiles-daemon
 python-build
+python-dateutil
 python-gevent
+python-gobject
 python-installer
 python-pip
 python-pipx
@@ -114,13 +121,18 @@ ttf-ubuntu-mono-nerd
 tumbler
 udiskie
 unzip
+upower
 virtualbox
 virtualbox-host-dkms
 vulkan-intel
 vulkan-tools
 vulkan-validation-layers
 wf-recorder
+wireplumber
 wl-clipboard
 xdg-desktop-portal-hyprland
+xdg-user-dirs
+xdg-utils
 xorg-xeyes
+zenity
 zsh

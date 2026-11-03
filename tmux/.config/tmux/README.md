@@ -153,7 +153,7 @@ Dieses tmux-Setup ist abgestimmt auf:
 
 * Alacritty (Truecolor + NDOT Bold)
 * Hyprland (Monochrome + Orange Accent)
-* Waybar (Nothing OS Stil)
+* Quickshell-Oberfläche und Drop-down-Terminal (SUPER+`)
 
 ---
 

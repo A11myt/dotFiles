@@ -363,12 +363,67 @@ def check_system(updates: bool) -> None:
             report("warn" if n else "ok", f"{name}: {n} Updates" if n else f"{name}: aktuell")
 
 
+def check_desktop() -> None:
+    section("Oberfläche & Dienste")
+    # Programme, ohne die einzelne Funktionen still nicht gehen
+    need = {"qs": "Oberfläche", "grim": "Screenshots", "magick": "Screenshots/Wallpaper", "wl-copy": "Zwischenablage",
+            "satty": "Screenshot bearbeiten", "wf-recorder": "Bildschirmaufnahme", "hyprsunset": "Nachtlicht",
+            "secret-tool": "Passwörter (Mail, Backup)", "notify-send": "Benachrichtigungen aus Skripten",
+            "xdg-open": "Links öffnen", "pactl": "Audio-Profile", "hyprlock": "Rückfall-Sperrbildschirm"}
+    missing = [f"{b} ({why})" for b, why in need.items() if not shutil.which(b)]
+    report("warn" if missing else "ok", "alle Programme für die Oberfläche da" if not missing
+           else f"{len(missing)} Programme fehlen", "\n".join(missing))
+    rc, _ = sh("python3 -I -c 'import dateutil'")
+    if rc:
+        report("warn", "python-dateutil fehlt → Kalender zeigt keine wiederkehrenden Termine")
+
+    # Quickshell: läuft, Sperrbildschirm bereit, config.json gültig
+    rc, out = sh("qs ipc show 2>/dev/null")
+    if rc or not out:
+        report("fail", "Quickshell antwortet nicht (qs ipc show) – SUPER+L sperrt dann mit hyprlock")
+    else:
+        targets = set(re.findall(r"^target (\S+)", out, re.M))
+        lack = [t for t in ("lock", "launcher", "screenshot", "settings", "sidebar", "calendar") if t not in targets]
+        report("warn" if lack else "ok", "Quickshell bereit (Sperrbildschirm, Launcher, Screenshot …)" if not lack
+               else "Quickshell-Funktionen fehlen: " + ", ".join(lack) + (" – Sperren fällt auf hyprlock zurück" if "lock" in lack else ""))
+    cfg = HOME / ".config/quickshell/config.json"
+    if cfg.exists():
+        try:
+            json.loads(cfg.read_text())
+            report("ok", "Quickshell config.json gültig")
+        except ValueError as e:
+            report("fail", "Quickshell config.json kaputt – Einstellungen werden ignoriert", str(e))
+
+    # private Dateien (Kalender-Adressen, Postfächer): nur für dich lesbar
+    for f in (HOME / ".local/share/quickshell/calendars.json", HOME / ".local/share/quickshell/mail.json"):
+        if f.exists():
+            mode = f.stat().st_mode & 0o777
+            report("ok" if mode == 0o600 else "fail", f"{f.name} privat (600)" if mode == 0o600
+                   else f"{f.name} ist für andere lesbar ({oct(mode)}) → chmod 600 {f}")
+
+    # Timer für Sitzung, Hell/Dunkel, Nachtlicht
+    off = []
+    for t in ("session-save.timer", "wallthemes-auto.timer", "nightlight.timer"):
+        rc, _ = sh(f"systemctl --user is-active --quiet {t}")
+        if rc:
+            off.append(t)
+    report("warn" if off else "ok", "Timer aktiv (Sitzung, Hell/Dunkel, Nachtlicht)" if not off
+           else "Timer nicht aktiv: " + ", ".join(off) + " → systemctl --user enable --now …")
+
+    # Emoji-Schrift und Browser für Links
+    rc, out = sh("fc-list : family | grep -i 'emoji'")
+    report("ok" if out else "warn", "Emoji-Schrift installiert" if out else "keine Emoji-Schrift → noto-fonts-emoji installieren")
+    rc, out = sh("xdg-mime query default x-scheme-handler/https")
+    report("ok" if out else "warn", f"Links öffnen mit {out}" if out else "kein Standard-Browser für Links (xdg-settings set default-web-browser …)")
+
+
 def main() -> int:
     check_matugen()
     check_hyprland()
     check_toolkits()
     check_dotfiles()
     check_system("--updates" in sys.argv)
+    check_desktop()
     if JSON:
         print(json.dumps({"time": int(time.time()), "results": RESULTS}, ensure_ascii=False))
     else:

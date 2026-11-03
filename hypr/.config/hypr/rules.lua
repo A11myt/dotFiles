@@ -18,7 +18,6 @@ hl.window_rule({ match = { class = "^(blueman-manager)$" }, float = true })
 hl.window_rule({ match = { class = "^(floating-term)$" }, float = true, size = "720 420", center = true })   -- kleine Terminals aus der Oberfläche (z. B. Akku-Ladegrenze)
 
 -- opacity rules (format: "active inactive")
-hl.window_rule({ match = { class = "^(Rofi)$" },           opacity = "0.92 0.92" })
 hl.window_rule({ match = { class = "^(org\\.pulseaudio\\.pavucontrol)$" }, opacity = "0.85 0.85" })
 hl.window_rule({ match = { class = "^(blueman-manager)$" },opacity = "0.88 0.88" })
 hl.window_rule({ match = { class = "^(Alacritty)$" },      opacity = "0.90 0.90" })
