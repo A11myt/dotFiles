@@ -1,0 +1,12 @@
+[Unit]
+Description=Hyprland-Protokoll nach ~/.logs/hyprland spiegeln (übersteht Abstürze und Neustarts)
+
+[Service]
+ExecStart=%h/.local/bin/hyprlog-mirror
+Restart=always
+RestartSec=5
+Nice=19
+IOSchedulingClass=idle
+
+[Install]
+WantedBy=default.target

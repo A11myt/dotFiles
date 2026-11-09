@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# hyprlog-mirror – Hyprland-Protokoll laufend nach ~/.logs/hyprland/ spiegeln.
+# Hyprland schreibt nach /run/user/…/hypr/<instanz>/hyprland.log – das ist nach einem Neustart weg.
+# Hier landet jede Hyprland-Sitzung in einer eigenen Datei (die letzten 5 bleiben), current.log zeigt auf die laufende.
+# Läuft als systemd-Benutzerdienst (hyprlog-mirror.service) – unabhängig von Hyprland, übersteht also dessen Absturz.
+set -u
+src="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/hypr"
+dst="$HOME/.logs/hyprland"
+mkdir -p "$dst"
+cur="" pid=""
+trap '[ -n "$pid" ] && kill "$pid" 2>/dev/null' EXIT
+
+while :; do
+  log=$(ls -t "$src"/*/hyprland.log 2>/dev/null | head -n1)
+  if [ -n "$log" ] && [ "$log" != "$cur" ]; then
+    [ -n "$pid" ] && kill "$pid" 2>/dev/null
+    inst=$(basename "$(dirname "$log")")
+    out="$dst/$(date +%F_%H-%M-%S)_${inst:0:12}.log"
+    tail -n +1 -F "$log" >>"$out" 2>/dev/null &
+    pid=$! cur="$log"
+    ln -sfn "$out" "$dst/current.log"
+    ls -1t "$dst"/20*.log 2>/dev/null | tail -n +6 | xargs -r rm --   # nur die letzten 5 Sitzungen behalten
+  fi
+  sleep 5
+done
